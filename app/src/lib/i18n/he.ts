@@ -192,6 +192,9 @@ const he = {
   "apply.cancel_confirm": "האם לבטל את המועמדות?",
   "apply.cancel_success": "המועמדות בוטלה",
   "apply.cancel_not_allowed": "לא ניתן לבטל מועמדות זו",
+  "apply.not_commitment": "הגשת מועמדות אינה מהווה התחייבות סופית — המעסיק יאשר את שיבוצך, ותקבל/י עדכון בכל שינוי בסטטוס.",
+  "shift.why_shown": "מדוע מוצגת לך משמרת זו?",
+  "shift.why_shown_text": "המשמרת פורסמה ומתאימה לתפקיד ולציון האמינות שלך, ומועדה עדיין לא הגיע.",
 
   "applicants.title": "מועמדים",
   "applicants.no_applicants": "אין מועמדים עדיין",

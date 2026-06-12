@@ -18,6 +18,7 @@ import {
   User,
   ArrowRight,
   CheckCircle2,
+  Info,
 } from "lucide-react";
 
 interface ShiftDetail {
@@ -286,8 +287,21 @@ export default function ShiftDetailsPage() {
         </div>
       )}
 
+      {/* Why am I seeing this */}
+      <div className="bg-primary/5 rounded-xl border border-primary/10 p-4 flex items-start gap-3">
+        <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+        <div>
+          <p className="text-sm font-medium text-foreground">
+            {t("shift.why_shown")}
+          </p>
+          <p className="text-sm text-foreground-secondary mt-0.5">
+            {t("shift.why_shown_text")}
+          </p>
+        </div>
+      </div>
+
       {/* Apply section */}
-      <div className="sticky bottom-20 bg-surface rounded-xl border border-border p-4 shadow-float">
+      <div className="sticky bottom-20 bg-surface rounded-xl border border-border p-4 shadow-float space-y-2">
         {applied ? (
           <div className="flex items-center justify-center gap-2 py-1">
             <CheckCircle2 className="h-5 w-5 text-success" />
@@ -296,14 +310,19 @@ export default function ShiftDetailsPage() {
             </span>
           </div>
         ) : (
-          <Button
-            className="w-full"
-            size="lg"
-            onClick={handleApply}
-            loading={applying}
-          >
-            {t("apply.button")}
-          </Button>
+          <>
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={handleApply}
+              loading={applying}
+            >
+              {t("apply.button")}
+            </Button>
+            <p className="text-xs text-foreground-tertiary text-center">
+              {t("apply.not_commitment")}
+            </p>
+          </>
         )}
         {applyMsg && !applied && (
           <p className="text-sm text-danger mt-2 text-center">{applyMsg}</p>
