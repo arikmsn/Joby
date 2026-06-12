@@ -45,7 +45,7 @@ export function checkRateLimit(phone: string): boolean {
 
 export async function createAndSendOTP(
   phone: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; devOtp?: string }> {
   if (!checkRateLimit(phone)) {
     return { success: false, error: "RATE_LIMITED" };
   }
@@ -55,16 +55,17 @@ export async function createAndSendOTP(
 
   otpStore.set(phone, { otp, expiresAt, attempts: 0 });
 
-  const result = await sendSMS(phone, `קוד האימות שלך ב-Joby: ${otp}`);
+  const result = await sendSMS(phone, `קוד ההתחברות שלך ל-Joby הוא: ${otp}`);
 
   if (!result.success) {
     return { success: false, error: "SMS_FAILED" };
   }
 
-  // TODO(PROD): Remove console log in production
-  console.log(`[OTP DEV] Phone: ${phone} | OTP: ${otp}`);
+  const exposeInDev =
+    process.env.OTP_EXPOSE_IN_DEV === "true" &&
+    process.env.NODE_ENV !== "production";
 
-  return { success: true };
+  return { success: true, ...(exposeInDev ? { devOtp: otp } : {}) };
 }
 
 export function verifyOTP(

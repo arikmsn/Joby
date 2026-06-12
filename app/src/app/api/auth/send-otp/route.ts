@@ -36,5 +36,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  return NextResponse.json({ sent: true });
+  const response: Record<string, unknown> = { sent: true };
+  if (result.devOtp) {
+    response.devOtp = result.devOtp;
+  }
+
+  return NextResponse.json(response);
 }

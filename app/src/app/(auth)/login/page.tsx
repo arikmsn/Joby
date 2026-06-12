@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [devOtp, setDevOtp] = useState("");
 
   async function handleSendOtp() {
     setError("");
@@ -33,6 +34,7 @@ export default function LoginPage() {
         setError(data.message || t("error.generic"));
         return;
       }
+      if (data.devOtp) setDevOtp(data.devOtp);
       setStep("otp");
     } catch {
       setError(t("error.generic"));
@@ -122,6 +124,11 @@ export default function LoginPage() {
             <p className="text-sm text-foreground-secondary text-center">
               {t("auth.otp")} <span dir="ltr" className="font-medium text-foreground">{phone}</span>
             </p>
+            {devOtp && (
+              <p className="text-xs text-center bg-warning/10 text-warning rounded-lg py-2 font-mono" dir="ltr">
+                DEV OTP: {devOtp}
+              </p>
+            )}
             <Input
               id="otp"
               placeholder={t("auth.otp.placeholder")}
