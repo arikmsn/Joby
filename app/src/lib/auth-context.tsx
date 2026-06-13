@@ -10,6 +10,7 @@ import {
 } from "react";
 import type { User, EmployerProfile, WorkerProfile } from "./types";
 import type { UserRole } from "./constants";
+import { roleHomePath } from "./auth-routes";
 
 interface AuthState {
   token: string | null;
@@ -112,14 +113,7 @@ export function useRequireAuth(requiredRole?: UserRole) {
       requiredRole &&
       auth.user.role !== requiredRole
     ) {
-      // Redirect to role-appropriate page
-      const roleHome =
-        auth.user.role === "employer"
-          ? "/dashboard"
-          : auth.user.role === "admin"
-            ? "/incidents"
-            : "/shifts";
-      window.location.href = roleHome;
+      window.location.href = `${roleHomePath(auth.user.role)}?notice=role_mismatch`;
     }
   }, [auth.isLoading, auth.user, requiredRole]);
 

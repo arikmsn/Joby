@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { NavLink } from "./nav-link";
+import { RoleMismatchBanner } from "./role-mismatch-banner";
 import { useAuth } from "@/lib/auth-context";
 import { t } from "@/lib/i18n/he";
 import type { EmployerProfile } from "@/lib/types";
@@ -116,6 +117,8 @@ export function EmployerLayout({ children }: { children: ReactNode }) {
             </nav>
           )}
         </header>
+
+        <RoleMismatchBanner />
 
         <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
       </div>

@@ -30,6 +30,21 @@ const he = {
   "auth.not_registered": "עוד לא רשום?",
   "auth.logout": "התנתק",
 
+  // Role-specific auth entry copy
+  "auth.worker.login_title": "כניסת עובדים",
+  "auth.worker.login_tagline": "מצא משמרות פנויות והתחל לעבוד עוד היום",
+  "auth.worker.join_title": "הרשמת עובדים",
+  "auth.worker.join_tagline": "הצטרף בחינם ומצא משמרות שמתאימות לך",
+  "auth.employer.login_title": "כניסת מעסיקים",
+  "auth.employer.login_tagline": "ניהול משמרות, גיוס וצוות במקום אחד",
+  "auth.employer.join_title": "הרשמת מעסיקים",
+  "auth.employer.join_tagline": "פרסם משמרות וגייס עובדים מהירים ואמינים",
+  "auth.login_as_worker": "כניסה כעובד",
+  "auth.login_as_employer": "כניסה כמעסיק",
+  "auth.join_as_worker": "הרשמה כעובד",
+  "auth.join_as_employer": "הרשמה כמעסיק",
+  "auth.role_mismatch_notice": "זוהינו שהחשבון שלך רשום במערכת אחרת — העברנו אותך למקום הנכון",
+
   // Errors
   "error.unauthorized": "נדרשת הזדהות",
   "error.forbidden": "אין הרשאה לפעולה זו",

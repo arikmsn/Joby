@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Briefcase, ClipboardList, User, Bell, QrCode } from "lucide-react";
 import { BottomNavLink } from "./nav-link";
+import { RoleMismatchBanner } from "./role-mismatch-banner";
 import { t } from "@/lib/i18n/he";
 
 export function WorkerLayout({ children }: { children: ReactNode }) {
@@ -18,6 +19,8 @@ export function WorkerLayout({ children }: { children: ReactNode }) {
           </span>
         </div>
       </header>
+
+      <RoleMismatchBanner />
 
       <main className="flex-1 overflow-y-auto px-4 py-4 pb-24 max-w-lg mx-auto w-full">
         {children}
