@@ -1,11 +1,21 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { t } from "@/lib/i18n/he";
-import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { MapPin, Clock, Banknote, Users, Search, AlertTriangle, SlidersHorizontal, X } from "lucide-react";
+import {
+  MapPin,
+  Clock,
+  Users,
+  Search,
+  AlertTriangle,
+  SlidersHorizontal,
+  X,
+  Sparkles,
+  CalendarClock,
+  Zap,
+} from "lucide-react";
 
 interface FeedShift {
   id: string;
@@ -26,7 +36,7 @@ interface FeedShift {
 }
 
 export default function WorkerShiftFeed() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [shifts, setShifts] = useState<FeedShift[]>([]);
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState("");
@@ -59,12 +69,14 @@ export default function WorkerShiftFeed() {
     fetchShifts();
   }, [fetchShifts]);
 
-  const roles = Array.from(
-    new Set(shifts.map((s) => s.role_tag).filter(Boolean))
+  const roles = useMemo(
+    () => Array.from(new Set(shifts.map((s) => s.role_tag).filter(Boolean))),
+    [shifts]
   );
-  const cities = Array.from(
-    new Set(shifts.map((s) => s.city).filter(Boolean))
-  ) as string[];
+  const cities = useMemo(
+    () => Array.from(new Set(shifts.map((s) => s.city).filter(Boolean))) as string[],
+    [shifts]
+  );
 
   const activeFilterCount = [roleFilter, cityFilter, dateFilter].filter(Boolean).length;
 
@@ -94,60 +106,207 @@ export default function WorkerShiftFeed() {
     return ms > 0 && ms < 1000 * 60 * 60 * 6; // within 6 hours
   }
 
-  // Urgent (SOS) shifts surface first so workers see the highest-priority opportunities immediately
-  const sortedShifts = [...shifts].sort((a, b) => {
-    if (!!a.has_sos !== !!b.has_sos) return a.has_sos ? -1 : 1;
-    return 0;
-  });
+  function isToday(iso: string) {
+    const d = new Date(iso);
+    const now = new Date();
+    return (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate()
+    );
+  }
+
+  // Group: urgent (SOS) first, then today, then upcoming
+  const urgent = shifts.filter((s) => s.has_sos);
+  const today = shifts.filter((s) => !s.has_sos && isToday(s.start_at));
+  const upcoming = shifts.filter((s) => !s.has_sos && !isToday(s.start_at));
+
+  const firstName = user?.full_name?.split(" ")[0];
+
+  function ShiftCard({ shift }: { shift: FeedShift }) {
+    const spotsLeft = shift.workers_needed - shift.slots_filled;
+    const soon = isStartingSoon(shift.start_at);
+    const initial = (shift.business_name || shift.employer_name || "?").charAt(0);
+
+    return (
+      <Link href={`/shifts/${shift.id}`}>
+        <div
+          className={`relative overflow-hidden rounded-2xl border bg-surface transition-all active:scale-[0.99] hover:shadow-card-hover ${
+            shift.has_sos
+              ? "border-danger/30 hover:border-danger/50"
+              : "border-border hover:border-primary/30"
+          }`}
+        >
+          {/* Accent bar */}
+          <div
+            className={`absolute inset-y-0 right-0 w-1 ${
+              shift.has_sos ? "bg-danger" : "bg-primary/30"
+            }`}
+          />
+
+          <div className="p-4 pr-5">
+            <div className="flex items-start justify-between gap-3 mb-2.5">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary">
+                  {initial}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                    <h3 className="font-semibold text-foreground truncate">
+                      {shift.title}
+                    </h3>
+                  </div>
+                  <p className="text-sm text-foreground-secondary truncate">
+                    {shift.business_name} · {shift.role_tag}
+                  </p>
+                </div>
+              </div>
+
+              {/* Pay — the hero number */}
+              <div className="shrink-0 text-left">
+                <div className="flex items-center gap-1 text-lg font-bold text-foreground" dir="ltr">
+                  {t("general.currency")}{shift.pay_rate}
+                </div>
+                <div className="text-xs text-foreground-tertiary text-right">
+                  {shift.pay_type === "hourly" ? t("shift.per_hour") : t("shift.total")}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-foreground-secondary mb-3">
+              <span className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-foreground-tertiary" />
+                {formatTime(shift.start_at)} · {formatDuration(shift.start_at, shift.end_at)}
+              </span>
+              <span className="flex items-center gap-1.5 truncate">
+                <MapPin className="h-3.5 w-3.5 text-foreground-tertiary shrink-0" />
+                {shift.city || shift.location_name || shift.address}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {shift.has_sos && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-danger px-2.5 py-1 text-xs font-bold text-white animate-pulse">
+                  <AlertTriangle className="h-3 w-3" />
+                  {t("sos.badge")}
+                </span>
+              )}
+              {!shift.has_sos && soon && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1 text-xs font-semibold text-warning">
+                  <Zap className="h-3 w-3" />
+                  {t("feed.starting_soon")}
+                </span>
+              )}
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
+                  spotsLeft <= 1
+                    ? "bg-warning/10 text-warning"
+                    : "bg-gray-100 text-foreground-secondary"
+                }`}
+              >
+                <Users className="h-3 w-3" />
+                {spotsLeft <= 0
+                  ? t("feed.full")
+                  : spotsLeft === 1
+                    ? t("feed.spots_left_one")
+                    : `${spotsLeft} ${t("feed.spots_left")}`}
+              </span>
+            </div>
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
+  function SectionHeader({ icon, label, count }: { icon: React.ReactNode; label: string; count: number }) {
+    return (
+      <div className="flex items-center gap-2 px-1 mb-2 mt-1">
+        {icon}
+        <h2 className="text-sm font-bold text-foreground">{label}</h2>
+        <span className="text-xs text-foreground-tertiary">({count})</span>
+      </div>
+    );
+  }
+
+  const hasAnyResults = shifts.length > 0;
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-foreground">{t("feed.title")}</h1>
+    <div className="space-y-5">
+      {/* Hero */}
+      <div className="hero-gradient rounded-2xl p-4 text-white shadow-card relative overflow-hidden">
+        <div className="absolute -left-8 -top-8 h-28 w-28 rounded-full bg-white/10" />
+        <div className="absolute -left-2 bottom-0 h-16 w-16 rounded-full bg-white/5" />
+        <div className="relative">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-white/80">
+                {t("feed.greeting")}{firstName ? `, ${firstName}` : ""} 👋
+              </p>
+              <h1 className="text-lg font-bold mt-0.5">{t("feed.subtitle")}</h1>
+            </div>
+            <span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" />
+              {t("feed.live_tag")}
+            </span>
+          </div>
           {!loading && (
-            <p className="text-sm text-foreground-secondary mt-0.5">
-              {shifts.length > 0
-                ? `${shifts.length} משמרות מתאימות עבורך`
-                : ""}
-            </p>
+            <div className="mt-3 flex items-center gap-2 text-sm">
+              <Sparkles className="h-4 w-4 text-white/80" />
+              <span className="font-semibold">{shifts.length}</span>
+              <span className="text-white/80">{t("feed.title")}</span>
+            </div>
           )}
+        </div>
+      </div>
+
+      {/* Filter chips */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => setRoleFilter("")}
+            className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors ${
+              !roleFilter
+                ? "bg-primary text-white border-primary"
+                : "bg-surface text-foreground-secondary border-border"
+            }`}
+          >
+            {t("feed.all_roles")}
+          </button>
+          {roles.map((r) => (
+            <button
+              key={r}
+              onClick={() => setRoleFilter(roleFilter === r ? "" : r)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors ${
+                roleFilter === r
+                  ? "bg-primary text-white border-primary"
+                  : "bg-surface text-foreground-secondary border-border"
+              }`}
+            >
+              {r}
+            </button>
+          ))}
         </div>
         <button
           onClick={() => setShowFilters((v) => !v)}
-          className={`relative flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-            showFilters || activeFilterCount > 0
+          className={`relative flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+            showFilters || cityFilter || dateFilter
               ? "border-primary bg-primary/10 text-primary"
               : "border-border bg-surface text-foreground-secondary"
           }`}
         >
           <SlidersHorizontal className="h-4 w-4" />
-          {t("general.filter")}
-          {activeFilterCount > 0 && (
+          {(cityFilter || dateFilter) && (
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
-              {activeFilterCount}
+              {[cityFilter, dateFilter].filter(Boolean).length}
             </span>
           )}
         </button>
       </div>
 
-      {/* Filters */}
+      {/* Extra filters panel */}
       {showFilters && (
         <div className="bg-surface rounded-xl border border-border p-3 space-y-2">
           <div className="flex flex-wrap gap-2">
-            <select
-              className="flex-1 min-w-[120px] rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-            >
-              <option value="">{t("feed.all_roles")}</option>
-              {roles.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
             <select
               className="flex-1 min-w-[120px] rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               value={cityFilter}
@@ -174,7 +333,7 @@ export default function WorkerShiftFeed() {
               className="flex items-center gap-1 text-xs text-foreground-secondary hover:text-foreground transition-colors"
             >
               <X className="h-3.5 w-3.5" />
-              נקה סינון
+              {t("feed.clear_filters")}
             </button>
           )}
         </div>
@@ -185,98 +344,70 @@ export default function WorkerShiftFeed() {
         <div className="flex items-center justify-center py-16">
           <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : sortedShifts.length === 0 ? (
-        <div className="text-center py-16">
-          <Search className="h-10 w-10 text-foreground-tertiary mx-auto mb-3" />
-          <p className="text-foreground-secondary">
-            {activeFilterCount > 0 ? "אין משמרות התואמות לסינון שבחרת" : t("feed.no_shifts")}
+      ) : !hasAnyResults ? (
+        <div className="text-center py-16 px-4">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+            <Search className="h-7 w-7 text-primary" />
+          </div>
+          <p className="font-semibold text-foreground">
+            {activeFilterCount > 0 ? t("feed.no_match") : t("feed.no_shifts")}
+          </p>
+          <p className="text-sm text-foreground-secondary mt-1 max-w-xs mx-auto">
+            {activeFilterCount > 0 ? t("feed.no_match_sub") : t("feed.no_shifts_sub")}
           </p>
           {activeFilterCount > 0 && (
             <button
               onClick={clearFilters}
-              className="mt-3 text-sm font-medium text-primary hover:underline"
+              className="mt-4 rounded-full bg-primary/10 text-primary text-sm font-semibold px-4 py-2 hover:bg-primary/20 transition-colors"
             >
-              נקה סינון וחזור לכל המשמרות
+              {t("feed.clear_filters")}
             </button>
           )}
         </div>
       ) : (
-        <div className="space-y-2.5">
-          {sortedShifts.map((shift) => {
-            const spotsLeft = shift.workers_needed - shift.slots_filled;
-            const soon = isStartingSoon(shift.start_at);
-            return (
-              <Link key={shift.id} href={`/shifts/${shift.id}`}>
-                <div
-                  className={`bg-surface rounded-xl border p-4 transition-all active:scale-[0.99] hover:shadow-card-hover ${
-                    shift.has_sos
-                      ? "border-danger/40 hover:border-danger/60 ring-1 ring-danger/10"
-                      : "border-border hover:border-primary/30"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                        <h3 className="font-semibold text-foreground truncate">
-                          {shift.title}
-                        </h3>
-                        {shift.has_sos && (
-                          <Badge variant="urgent" className="shrink-0">
-                            <AlertTriangle className="h-3 w-3 ml-1" />
-                            {t("sos.badge")}
-                          </Badge>
-                        )}
-                        {!shift.has_sos && soon && (
-                          <Badge variant="warning" className="shrink-0">
-                            מתחיל בקרוב
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-foreground-secondary truncate">
-                        {shift.business_name}
-                      </p>
-                    </div>
-                    <Badge variant="secondary" className="shrink-0">
-                      {shift.role_tag}
-                    </Badge>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-foreground-secondary mt-3">
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 text-foreground-tertiary" />
-                      {formatTime(shift.start_at)} ·{" "}
-                      {formatDuration(shift.start_at, shift.end_at)}
-                    </span>
-                    <span className="flex items-center gap-1.5 truncate">
-                      <MapPin className="h-3.5 w-3.5 text-foreground-tertiary shrink-0" />
-                      {shift.city || shift.location_name || shift.address}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-border-light">
-                    <span className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                      <Banknote className="h-4 w-4 text-primary" />
-                      {t("general.currency")}
-                      {shift.pay_rate}{" "}
-                      <span className="font-normal text-foreground-secondary">
-                        {shift.pay_type === "hourly"
-                          ? t("shift.per_hour")
-                          : t("shift.total")}
-                      </span>
-                    </span>
-                    <span
-                      className={`flex items-center gap-1.5 text-sm ${
-                        spotsLeft <= 1 ? "text-warning font-medium" : "text-foreground-secondary"
-                      }`}
-                    >
-                      <Users className="h-3.5 w-3.5" />
-                      {shift.slots_filled}/{shift.workers_needed}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
+        <div className="space-y-5">
+          {urgent.length > 0 && (
+            <div>
+              <SectionHeader
+                icon={<AlertTriangle className="h-4 w-4 text-danger" />}
+                label={t("feed.section_urgent")}
+                count={urgent.length}
+              />
+              <div className="space-y-2.5">
+                {urgent.map((s) => (
+                  <ShiftCard key={s.id} shift={s} />
+                ))}
+              </div>
+            </div>
+          )}
+          {today.length > 0 && (
+            <div>
+              <SectionHeader
+                icon={<Zap className="h-4 w-4 text-warning" />}
+                label={t("feed.section_today")}
+                count={today.length}
+              />
+              <div className="space-y-2.5">
+                {today.map((s) => (
+                  <ShiftCard key={s.id} shift={s} />
+                ))}
+              </div>
+            </div>
+          )}
+          {upcoming.length > 0 && (
+            <div>
+              <SectionHeader
+                icon={<CalendarClock className="h-4 w-4 text-primary" />}
+                label={t("feed.section_upcoming")}
+                count={upcoming.length}
+              />
+              <div className="space-y-2.5">
+                {upcoming.map((s) => (
+                  <ShiftCard key={s.id} shift={s} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -41,9 +41,9 @@ export function BottomNavLink({ href, icon, label }: NavLinkProps) {
     <Link
       href={href}
       className={cn(
-        "flex flex-col items-center gap-0.5 py-2 px-3 text-[11px] transition-colors min-w-[56px]",
+        "flex flex-1 flex-col items-center gap-0.5 rounded-xl py-2 text-[11px] transition-all min-w-[56px]",
         isActive
-          ? "text-primary font-medium"
+          ? "bg-primary/10 text-primary font-semibold"
           : "text-foreground-tertiary hover:text-foreground-secondary"
       )}
     >

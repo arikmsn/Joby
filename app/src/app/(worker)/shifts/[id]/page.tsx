@@ -9,8 +9,6 @@ import { Button } from "@/components/ui/button";
 import {
   MapPin,
   Clock,
-  Banknote,
-  Users,
   Shirt,
   Wrench,
   Navigation,
@@ -19,6 +17,8 @@ import {
   ArrowRight,
   CheckCircle2,
   Info,
+  Building2,
+  AlertTriangle,
 } from "lucide-react";
 
 interface ShiftDetail {
@@ -43,6 +43,7 @@ interface ShiftDetail {
   contact_phone: string | null;
   employer_name: string;
   business_name: string;
+  has_sos?: boolean;
 }
 
 export default function ShiftDetailsPage() {
@@ -104,9 +105,20 @@ export default function ShiftDetailsPage() {
 
   if (error || !shift)
     return (
-      <p className="text-center py-8 text-danger">
-        {error || t("error.shift_not_found")}
-      </p>
+      <div className="text-center py-16 px-4">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-danger/10">
+          <AlertTriangle className="h-7 w-7 text-danger" />
+        </div>
+        <p className="font-semibold text-foreground">
+          {error || t("error.shift_not_found")}
+        </p>
+        <button
+          onClick={() => router.back()}
+          className="mt-4 rounded-full bg-primary/10 text-primary text-sm font-semibold px-4 py-2 hover:bg-primary/20 transition-colors"
+        >
+          {t("general.back")}
+        </button>
+      </div>
     );
 
   function fmt(iso: string) {
@@ -128,6 +140,7 @@ export default function ShiftDetailsPage() {
   }
 
   const spotsLeft = shift.workers_needed - shift.slots_filled;
+  const initial = (shift.business_name || shift.employer_name || "?").charAt(0);
 
   return (
     <div className="space-y-4">
@@ -140,21 +153,61 @@ export default function ShiftDetailsPage() {
         {t("general.back")}
       </button>
 
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <h1 className="text-xl font-bold text-foreground">{shift.title}</h1>
-          <Badge variant="secondary">{shift.role_tag}</Badge>
+      {/* Hero */}
+      <div className="hero-gradient rounded-2xl p-4 text-white shadow-card relative overflow-hidden">
+        <div className="absolute -left-8 -top-8 h-28 w-28 rounded-full bg-white/10" />
+        <div className="relative">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <Badge variant="secondary" className="bg-white/15 text-white border-0">
+              {shift.role_tag}
+            </Badge>
+            {shift.has_sos && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-white text-danger px-2.5 py-1 text-xs font-bold animate-pulse">
+                <AlertTriangle className="h-3 w-3" />
+                {t("sos.badge")}
+              </span>
+            )}
+          </div>
+          <h1 className="text-xl font-bold">{shift.title}</h1>
+          <p className="text-white/80 text-sm mt-0.5">{shift.business_name}</p>
+
+          <div className="mt-4 flex items-end justify-between">
+            <div>
+              <div className="text-2xl font-bold" dir="ltr">
+                {t("general.currency")}{shift.pay_rate}
+              </div>
+              <div className="text-xs text-white/70">
+                {shift.pay_type === "hourly" ? t("shift.per_hour") : t("shift.total")}
+              </div>
+            </div>
+            <div className="text-right">
+              <div
+                className={`text-sm font-semibold ${
+                  spotsLeft > 0 ? "text-white" : "text-white/70"
+                }`}
+              >
+                {spotsLeft > 0
+                  ? spotsLeft === 1
+                    ? t("feed.spots_left_one")
+                    : `${spotsLeft} ${t("feed.spots_left")}`
+                  : t("feed.full")}
+              </div>
+              <div className="text-xs text-white/70">
+                {shift.slots_filled}/{shift.workers_needed} {t("shift.slots")}
+              </div>
+            </div>
+          </div>
         </div>
-        <p className="text-foreground-secondary">{shift.business_name}</p>
       </div>
 
       {/* Key details */}
       <div className="bg-surface rounded-xl border border-border p-4 space-y-3">
         <div className="flex items-center gap-3 text-sm">
-          <Clock className="h-4 w-4 text-foreground-tertiary shrink-0" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <Clock className="h-4 w-4 text-primary" />
+          </div>
           <div>
-            <div className="text-foreground">
+            <div className="text-foreground font-medium">
               {fmt(shift.start_at)} — {fmt(shift.end_at)}
             </div>
             <div className="text-foreground-secondary">
@@ -163,7 +216,9 @@ export default function ShiftDetailsPage() {
           </div>
         </div>
         <div className="flex items-center gap-3 text-sm">
-          <MapPin className="h-4 w-4 text-foreground-tertiary shrink-0" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <MapPin className="h-4 w-4 text-primary" />
+          </div>
           <div>
             {shift.location_name && (
               <div className="font-medium text-foreground">
@@ -176,33 +231,34 @@ export default function ShiftDetailsPage() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3 text-sm">
-          <Banknote className="h-4 w-4 text-primary shrink-0" />
-          <span className="font-semibold text-foreground">
-            {t("general.currency")}
-            {shift.pay_rate}{" "}
-            <span className="font-normal text-foreground-secondary">
-              {shift.pay_type === "hourly"
-                ? t("shift.per_hour")
-                : t("shift.total")}
-            </span>
-          </span>
+      </div>
+
+      {/* Employer info */}
+      <div className="bg-surface rounded-xl border border-border p-4 flex items-center gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-base font-bold text-primary">
+          {initial}
         </div>
-        <div className="flex items-center gap-3 text-sm">
-          <Users className="h-4 w-4 text-foreground-tertiary shrink-0" />
-          <span className="text-foreground">
-            {shift.slots_filled}/{shift.workers_needed}
-            {" — "}
-            <span
-              className={
-                spotsLeft > 0
-                  ? "text-success font-medium"
-                  : "text-danger font-medium"
-              }
-            >
-              {spotsLeft > 0 ? `${spotsLeft} מקומות פנויים` : "מלא"}
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <Building2 className="h-3.5 w-3.5 text-foreground-tertiary" />
+            <span className="font-semibold text-foreground truncate">
+              {shift.business_name}
             </span>
-          </span>
+          </div>
+          <p className="text-sm text-foreground-secondary">{t("shift.employer_verified")}</p>
+        </div>
+      </div>
+
+      {/* Why am I seeing this */}
+      <div className="bg-primary/5 rounded-xl border border-primary/10 p-4 flex items-start gap-3">
+        <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+        <div>
+          <p className="text-sm font-medium text-foreground">
+            {t("shift.why_shown")}
+          </p>
+          <p className="text-sm text-foreground-secondary mt-0.5">
+            {t("shift.why_shown_text")}
+          </p>
         </div>
       </div>
 
@@ -221,6 +277,7 @@ export default function ShiftDetailsPage() {
       {/* Requirements */}
       {(shift.dress_code || shift.gear_required || shift.arrival_notes) && (
         <div className="bg-surface rounded-xl border border-border p-4 space-y-3">
+          <h3 className="font-semibold text-foreground">{t("shift.requirements")}</h3>
           {shift.dress_code && (
             <div className="flex items-start gap-3 text-sm">
               <Shirt className="h-4 w-4 text-foreground-tertiary mt-0.5 shrink-0" />
@@ -286,19 +343,6 @@ export default function ShiftDetailsPage() {
           )}
         </div>
       )}
-
-      {/* Why am I seeing this */}
-      <div className="bg-primary/5 rounded-xl border border-primary/10 p-4 flex items-start gap-3">
-        <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-foreground">
-            {t("shift.why_shown")}
-          </p>
-          <p className="text-sm text-foreground-secondary mt-0.5">
-            {t("shift.why_shown_text")}
-          </p>
-        </div>
-      </div>
 
       {/* Apply section */}
       <div className="sticky bottom-20 bg-surface rounded-xl border border-border p-4 shadow-float space-y-2">

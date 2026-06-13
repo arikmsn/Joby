@@ -3,10 +3,8 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { t } from "@/lib/i18n/he";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Camera } from "lucide-react";
+import { QrCode, CheckCircle2, XCircle, ScanLine } from "lucide-react";
 
 export default function ScanPage() {
   const { token } = useAuth();
@@ -26,6 +24,7 @@ export default function ScanPage() {
       });
       const data = await res.json();
       setResult({ ok: res.ok, message: data.message || t("error.generic") });
+      if (res.ok) setManualToken("");
     } catch {
       setResult({ ok: false, message: t("error.generic") });
     } finally {
@@ -34,44 +33,69 @@ export default function ScanPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto space-y-4">
-      <h1 className="text-2xl font-bold text-foreground">{t("qr.scan_title")}</h1>
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-xl font-bold text-foreground">{t("qr.scan_title")}</h1>
+      </div>
 
-      <Card>
-        <CardContent className="p-6 text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-            <Camera className="h-8 w-8 text-primary" />
+      {result ? (
+        <div className="bg-surface rounded-2xl border border-border p-6 text-center space-y-4">
+          <div
+            className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${
+              result.ok ? "bg-success/10" : "bg-danger/10"
+            }`}
+          >
+            {result.ok ? (
+              <CheckCircle2 className="h-8 w-8 text-success" />
+            ) : (
+              <XCircle className="h-8 w-8 text-danger" />
+            )}
           </div>
-          <p className="text-sm text-foreground-secondary">
-            הזן את קוד ה-QR שקיבלת מהמעסיק
-          </p>
-
-          <div className="space-y-2">
-            <input
-              type="text"
-              dir="ltr"
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-left font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
-              placeholder="QR token..."
-              value={manualToken}
-              onChange={(e) => setManualToken(e.target.value)}
-            />
-            <Button
-              className="w-full"
-              onClick={() => handleScan(manualToken)}
-              loading={scanning}
-              disabled={!manualToken.trim()}
-            >
-              {t("qr.scan")}
-            </Button>
+          <div>
+            <p className="font-semibold text-foreground">
+              {result.ok ? t("qr.success_title") : t("qr.error_title")}
+            </p>
+            <p className="text-sm text-foreground-secondary mt-1">{result.message}</p>
           </div>
+          <Button variant="secondary" className="w-full" onClick={() => setResult(null)}>
+            {t("qr.scan_again")}
+          </Button>
+        </div>
+      ) : (
+        <div className="hero-gradient rounded-2xl p-6 text-center text-white shadow-card relative overflow-hidden">
+          <div className="absolute -left-8 -top-8 h-28 w-28 rounded-full bg-white/10" />
+          <div className="relative space-y-4">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/15">
+              <ScanLine className="h-8 w-8 text-white" />
+            </div>
+            <p className="text-sm text-white/85 max-w-xs mx-auto">
+              {t("qr.scan_intro")}
+            </p>
 
-          {result && (
-            <Badge variant={result.ok ? "success" : "danger"} className="text-sm px-3 py-1.5">
-              {result.message}
-            </Badge>
-          )}
-        </CardContent>
-      </Card>
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center gap-2 rounded-xl bg-white/95 px-3 py-2.5">
+                <QrCode className="h-4 w-4 text-foreground-tertiary shrink-0" />
+                <input
+                  type="text"
+                  dir="ltr"
+                  className="w-full bg-transparent text-sm text-left font-mono text-foreground placeholder:text-foreground-tertiary focus:outline-none"
+                  placeholder={t("qr.placeholder")}
+                  value={manualToken}
+                  onChange={(e) => setManualToken(e.target.value)}
+                />
+              </div>
+              <Button
+                className="w-full bg-white text-primary hover:bg-white/90 shadow-none"
+                onClick={() => handleScan(manualToken)}
+                loading={scanning}
+                disabled={!manualToken.trim()}
+              >
+                {t("qr.scan")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

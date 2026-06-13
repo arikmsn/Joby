@@ -4,7 +4,7 @@ import { shifts, users, employerProfiles, sosBroadcasts } from "@/lib/schema";
 import { requireRole, requireAuth } from "@/lib/auth";
 import { createShiftSchema, shiftFilterSchema } from "@/lib/validators";
 import { UserRole, ShiftStatus } from "@/lib/constants";
-import { eq, and, gte, lte, ilike, sql, desc } from "drizzle-orm";
+import { eq, and, gte, lte, ilike, sql, desc, inArray } from "drizzle-orm";
 
 // POST /api/shifts — create a new shift (employer only)
 export async function POST(req: NextRequest) {
@@ -140,7 +140,7 @@ export async function GET(req: NextRequest) {
       .where(
         and(
           eq(sosBroadcasts.status, "ACTIVE"),
-          sql`${sosBroadcasts.shift_id} = ANY(${shiftIds})`
+          inArray(sosBroadcasts.shift_id, shiftIds)
         )
       );
     sosShiftIds = new Set(sosRows.map((r) => r.shift_id));

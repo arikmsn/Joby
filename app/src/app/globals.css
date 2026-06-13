@@ -57,4 +57,19 @@ input[dir="ltr"] {
   .text-balance {
     text-wrap: balance;
   }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .hero-gradient {
+    background: linear-gradient(135deg, var(--primary) 0%, #0f766e 55%, #134e4a 100%);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
 }
