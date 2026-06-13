@@ -1,5 +1,5 @@
 // ============================================================
-// Joby/ShiftMatch — Single source of truth for all constants
+// Joby — Single source of truth for all constants
 // ============================================================
 
 // --- Shift Status ---

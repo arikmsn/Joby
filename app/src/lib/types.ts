@@ -1,5 +1,5 @@
 // ============================================================
-// Joby/ShiftMatch — TypeScript types (mirrors DB schema)
+// Joby — TypeScript types (mirrors DB schema)
 // ============================================================
 
 import type {

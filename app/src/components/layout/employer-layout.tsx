@@ -12,6 +12,8 @@ import {
 import { useState } from "react";
 import { NavLink } from "./nav-link";
 import { RoleMismatchBanner } from "./role-mismatch-banner";
+import { JobyMark } from "@/components/ui/joby-mark";
+import { useDocumentTitle } from "@/lib/use-document-title";
 import { useAuth } from "@/lib/auth-context";
 import { t } from "@/lib/i18n/he";
 import type { EmployerProfile } from "@/lib/types";
@@ -20,15 +22,19 @@ export function EmployerLayout({ children }: { children: ReactNode }) {
   const { profile, logout } = useAuth();
   const employerProfile = profile as EmployerProfile | null;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  useDocumentTitle(t("nav.dashboard"));
 
   return (
     <div className="flex min-h-screen bg-background">
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:w-64 md:flex-col border-l border-border bg-surface">
         <div className="p-5 border-b border-border">
-          <h1 className="text-xl font-bold text-primary">
-            {t("app.name")}
-          </h1>
+          <div className="flex items-center gap-2">
+            <JobyMark className="h-6 w-6" />
+            <h1 className="text-xl font-bold text-primary">
+              {t("app.name")}
+            </h1>
+          </div>
           {employerProfile && (
             <p className="text-sm text-foreground-secondary mt-1">
               {employerProfile.business_name}
@@ -76,9 +82,12 @@ export function EmployerLayout({ children }: { children: ReactNode }) {
               >
                 {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
-              <h1 className="text-lg font-bold text-primary">
-                {t("app.name")}
-              </h1>
+              <div className="flex items-center gap-2">
+                <JobyMark className="h-6 w-6" />
+                <h1 className="text-lg font-bold text-primary">
+                  {t("app.name")}
+                </h1>
+              </div>
             </div>
             {employerProfile && (
               <span className="text-sm text-foreground-secondary truncate max-w-[150px]">

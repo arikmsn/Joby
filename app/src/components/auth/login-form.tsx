@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
+import { useDocumentTitle } from "@/lib/use-document-title";
 import { t } from "@/lib/i18n/he";
 import Link from "next/link";
+import { Building2, User } from "lucide-react";
+import { JobyMark } from "@/components/ui/joby-mark";
 import { roleHomePath, type AuthRole } from "@/lib/auth-routes";
 
 type Step = "phone" | "otp";
@@ -87,6 +90,15 @@ export function LoginForm({ role }: { role?: AuthRole }) {
     }
   }
 
+  const title =
+    role === "worker"
+      ? t("auth.worker.login_title")
+      : role === "employer"
+        ? t("auth.employer.login_title")
+        : t("auth.login");
+
+  useDocumentTitle(title);
+
   if (isLoading || user) {
     return (
       <div className="text-center py-10">
@@ -95,25 +107,65 @@ export function LoginForm({ role }: { role?: AuthRole }) {
     );
   }
 
-  const title =
-    role === "worker"
-      ? t("auth.worker.login_title")
-      : role === "employer"
-        ? t("auth.employer.login_title")
-        : t("app.name");
+  // Generic gateway: no role in the URL — let the user choose where to go.
+  if (!role) {
+    return (
+      <div className="space-y-8">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center mb-4">
+            <JobyMark className="h-14 w-14" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">{t("app.name")}</h1>
+          <p className="text-sm text-foreground-secondary mt-1">{t("auth.login")}</p>
+        </div>
+
+        <div className="space-y-3">
+          <Link
+            href="/login/worker"
+            className="w-full flex items-center gap-4 p-4 bg-surface rounded-xl border border-border hover:border-primary hover:shadow-card-hover transition-all text-right"
+          >
+            <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center">
+              <User className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <div className="font-semibold text-foreground">{t("auth.login_as_worker")}</div>
+              <div className="text-sm text-foreground-secondary">מצא משמרות והתחל לעבוד</div>
+            </div>
+          </Link>
+
+          <Link
+            href="/login/employer"
+            className="w-full flex items-center gap-4 p-4 bg-surface rounded-xl border border-border hover:border-primary hover:shadow-card-hover transition-all text-right"
+          >
+            <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Building2 className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <div className="font-semibold text-foreground">{t("auth.login_as_employer")}</div>
+              <div className="text-sm text-foreground-secondary">צור משמרות וגייס עובדים</div>
+            </div>
+          </Link>
+        </div>
+
+        <p className="text-center text-sm text-foreground-secondary">
+          {t("auth.not_registered")}{" "}
+          <Link href="/register" className="text-primary font-medium hover:underline">
+            {t("auth.register")}
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
   const tagline =
-    role === "worker"
-      ? t("auth.worker.login_tagline")
-      : role === "employer"
-        ? t("auth.employer.login_tagline")
-        : t("app.tagline");
+    role === "worker" ? t("auth.worker.login_tagline") : t("auth.employer.login_tagline");
 
   return (
     <div className="space-y-8">
       {/* Logo area */}
       <div className="text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-          <span className="text-2xl font-bold text-primary">J</span>
+        <div className="inline-flex items-center justify-center mb-4">
+          <JobyMark className="h-14 w-14" />
         </div>
         <h1 className="text-2xl font-bold text-foreground">{title}</h1>
         <p className="text-sm text-foreground-secondary mt-1">{tagline}</p>
@@ -192,23 +244,10 @@ export function LoginForm({ role }: { role?: AuthRole }) {
       {/* Footer link */}
       <p className="text-center text-sm text-foreground-secondary">
         {t("auth.not_registered")}{" "}
-        <Link href={role ? `/join/${role}` : "/register"} className="text-primary font-medium hover:underline">
+        <Link href={`/join/${role}`} className="text-primary font-medium hover:underline">
           {t("auth.register")}
         </Link>
       </p>
-
-      {/* Role switch (generic gateway only) */}
-      {!role && (
-        <p className="text-center text-xs text-foreground-tertiary space-x-3 space-x-reverse">
-          <Link href="/login/worker" className="hover:text-foreground-secondary hover:underline">
-            {t("auth.login_as_worker")}
-          </Link>
-          <span>·</span>
-          <Link href="/login/employer" className="hover:text-foreground-secondary hover:underline">
-            {t("auth.login_as_employer")}
-          </Link>
-        </p>
-      )}
     </div>
   );
 }

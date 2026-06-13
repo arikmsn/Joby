@@ -5,9 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
+import { useDocumentTitle } from "@/lib/use-document-title";
 import { t } from "@/lib/i18n/he";
 import Link from "next/link";
 import { Building2, User } from "lucide-react";
+import { JobyMark } from "@/components/ui/joby-mark";
 import { roleHomePath, type AuthRole } from "@/lib/auth-routes";
 
 export function RegisterForm({ forcedRole }: { forcedRole?: AuthRole }) {
@@ -89,6 +91,15 @@ function RegisterFormInner({ forcedRole }: { forcedRole?: AuthRole }) {
     }
   }
 
+  const title =
+    forcedRole === "worker"
+      ? t("auth.worker.join_title")
+      : forcedRole === "employer"
+        ? t("auth.employer.join_title")
+        : t("auth.register");
+
+  useDocumentTitle(title);
+
   if (isLoading || user) {
     return (
       <div className="text-center py-10">
@@ -101,8 +112,8 @@ function RegisterFormInner({ forcedRole }: { forcedRole?: AuthRole }) {
     return (
       <div className="space-y-8">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-            <span className="text-2xl font-bold text-primary">J</span>
+          <div className="inline-flex items-center justify-center mb-4">
+            <JobyMark className="h-14 w-14" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">
             {t("auth.register")}
@@ -114,19 +125,6 @@ function RegisterFormInner({ forcedRole }: { forcedRole?: AuthRole }) {
 
         <div className="space-y-3">
           <button
-            onClick={() => setRole("employer")}
-            className="w-full flex items-center gap-4 p-4 bg-surface rounded-xl border border-border hover:border-primary hover:shadow-card-hover transition-all text-right"
-          >
-            <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Building2 className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <div className="font-semibold text-foreground">{t("auth.employer")}</div>
-              <div className="text-sm text-foreground-secondary">צור משמרות וגייס עובדים</div>
-            </div>
-          </button>
-
-          <button
             onClick={() => setRole("worker")}
             className="w-full flex items-center gap-4 p-4 bg-surface rounded-xl border border-border hover:border-primary hover:shadow-card-hover transition-all text-right"
           >
@@ -136,6 +134,19 @@ function RegisterFormInner({ forcedRole }: { forcedRole?: AuthRole }) {
             <div>
               <div className="font-semibold text-foreground">{t("auth.worker")}</div>
               <div className="text-sm text-foreground-secondary">מצא משמרות והתחל לעבוד</div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setRole("employer")}
+            className="w-full flex items-center gap-4 p-4 bg-surface rounded-xl border border-border hover:border-primary hover:shadow-card-hover transition-all text-right"
+          >
+            <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Building2 className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <div className="font-semibold text-foreground">{t("auth.employer")}</div>
+              <div className="text-sm text-foreground-secondary">צור משמרות וגייס עובדים</div>
             </div>
           </button>
         </div>
@@ -150,12 +161,6 @@ function RegisterFormInner({ forcedRole }: { forcedRole?: AuthRole }) {
     );
   }
 
-  const title =
-    forcedRole === "worker"
-      ? t("auth.worker.join_title")
-      : forcedRole === "employer"
-        ? t("auth.employer.join_title")
-        : t("auth.register");
   const tagline =
     forcedRole === "worker"
       ? t("auth.worker.join_tagline")

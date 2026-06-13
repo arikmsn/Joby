@@ -105,7 +105,11 @@ export function useRequireAuth(requiredRole?: UserRole) {
 
   useEffect(() => {
     if (!auth.isLoading && !auth.user) {
-      window.location.href = "/login";
+      const loginPath =
+        requiredRole === "worker" || requiredRole === "employer"
+          ? `/login/${requiredRole}`
+          : "/login";
+      window.location.href = loginPath;
     }
     if (
       !auth.isLoading &&

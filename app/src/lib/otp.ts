@@ -1,5 +1,5 @@
 // ============================================================
-// Joby/ShiftMatch — OTP generation and verification
+// Joby — OTP generation and verification
 // TODO(PROD): Replace in-memory store with Redis or DB-backed store
 // ============================================================
 

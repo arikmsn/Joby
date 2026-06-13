@@ -4,16 +4,18 @@ import type { ReactNode } from "react";
 import { Briefcase, ClipboardList, User, Bell, QrCode } from "lucide-react";
 import { BottomNavLink } from "./nav-link";
 import { RoleMismatchBanner } from "./role-mismatch-banner";
+import { JobyMark } from "@/components/ui/joby-mark";
+import { useDocumentTitle } from "@/lib/use-document-title";
 import { t } from "@/lib/i18n/he";
 
 export function WorkerLayout({ children }: { children: ReactNode }) {
+  useDocumentTitle(t("nav.shifts"));
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <header className="sticky top-0 z-30 bg-background border-b border-border-light px-4 py-3">
         <div className="flex items-center gap-2 max-w-lg mx-auto">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-xs font-bold text-white">
-            J
-          </div>
+          <JobyMark className="h-6 w-6" />
           <span className="text-sm font-semibold text-foreground tracking-tight">
             {t("app.name")}
           </span>
