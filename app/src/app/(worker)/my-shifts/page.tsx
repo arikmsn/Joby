@@ -6,7 +6,7 @@ import { t } from "@/lib/i18n/he";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { MapPin, Clock, Banknote, ClipboardList, ChevronLeft } from "lucide-react";
+import { MapPin, Clock, Banknote, ChevronLeft } from "lucide-react";
 
 interface MyApplication {
   id: string;
@@ -92,22 +92,6 @@ function statusBadge(status: string, isBackup: boolean) {
   return <Badge variant={m.variant}>{m.label}</Badge>;
 }
 
-function statusAccent(status: string): string {
-  switch (status) {
-    case "PENDING":
-      return "bg-warning";
-    case "APPROVED":
-    case "CONFIRMED":
-    case "CHECKED_IN":
-      return "bg-success";
-    case "REJECTED":
-    case "NO_SHOW":
-      return "bg-danger";
-    default:
-      return "bg-border";
-  }
-}
-
 export default function MyShiftsPage() {
   const { token } = useAuth();
   const [apps, setApps] = useState<MyApplication[]>([]);
@@ -171,6 +155,11 @@ export default function MyShiftsPage() {
         ? t("my_shifts.no_approved")
         : t("my_shifts.no_history");
 
+  function formatPay(rate: number) {
+    const n = Number(rate);
+    return n % 1 === 0 ? n.toString() : n.toFixed(2);
+  }
+
   function fmt(iso: string) {
     return new Date(iso).toLocaleString("he-IL", {
       day: "numeric",
@@ -205,29 +194,19 @@ export default function MyShiftsPage() {
       </h1>
 
       {/* Tabs */}
-      <div className="flex bg-surface rounded-xl border border-border p-1 gap-1">
+      <div className="flex border-b border-border">
         {tabs.map((tb) => (
           <button
             key={tb.key}
             onClick={() => setTab(tb.key)}
-            className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
+            className={`flex-1 pb-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === tb.key
-                ? "bg-primary text-white shadow-sm"
-                : "text-foreground-secondary hover:text-foreground hover:bg-gray-50"
+                ? "border-primary text-foreground"
+                : "border-transparent text-foreground-tertiary hover:text-foreground-secondary"
             }`}
           >
             {tb.label}
-            {tb.count > 0 && (
-              <span
-                className={`mr-1.5 text-xs rounded-full px-1.5 py-0.5 ${
-                  tab === tb.key
-                    ? "bg-white/20 text-white"
-                    : "bg-gray-100 text-foreground-secondary"
-                }`}
-              >
-                {tb.count}
-              </span>
-            )}
+            {tb.count > 0 && <span className="text-foreground-tertiary"> {tb.count}</span>}
           </button>
         ))}
       </div>
@@ -238,10 +217,7 @@ export default function MyShiftsPage() {
           <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 px-4">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-            <ClipboardList className="h-7 w-7 text-primary" />
-          </div>
+        <div className="text-center py-20 px-4">
           <p className="text-foreground-secondary">{emptyMsg}</p>
           {tab !== "history" && (
             <Link
@@ -253,96 +229,85 @@ export default function MyShiftsPage() {
           )}
         </div>
       ) : (
-        <div className="space-y-2.5">
+        <div className="rounded-2xl border border-border bg-surface divide-y divide-border-light overflow-hidden">
           {filtered.map((app) => (
-            <div
-              key={app.id}
-              className="relative overflow-hidden rounded-2xl border border-border bg-surface"
-            >
-              <div className={`absolute inset-y-0 right-0 w-1 ${statusAccent(app.status)}`} />
-              <div className="p-4 pr-5">
-                <div className="flex items-start justify-between gap-3 mb-2">
+            <div key={app.id} className="p-4">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <Link
+                  href={`/shifts/${app.shift_id}`}
+                  className="min-w-0 group"
+                >
+                  <div className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                    {app.shift_title}
+                  </div>
+                  <p className="text-sm text-foreground-secondary truncate mt-0.5">
+                    {app.business_name}
+                  </p>
+                </Link>
+                {statusBadge(app.status, app.is_backup)}
+              </div>
+
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground-secondary mb-3">
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5 text-foreground-tertiary" />
+                  {fmt(app.shift_start_at)}
+                </span>
+                {app.shift_city && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 text-foreground-tertiary" />
+                    {app.shift_city}
+                  </span>
+                )}
+                <span className="flex items-center gap-1 font-medium text-foreground">
+                  <Banknote className="h-3.5 w-3.5 text-primary" />
+                  {t("general.currency")}
+                  {formatPay(app.shift_pay_rate)}{" "}
+                  <span className="font-normal text-foreground-secondary">
+                    {app.shift_pay_type === "hourly"
+                      ? t("shift.per_hour")
+                      : t("shift.total")}
+                  </span>
+                </span>
+              </div>
+
+              {(app.status === "APPROVED" && !app.is_backup) ||
+              tab === "pending" ||
+              (tab === "approved" && app.status !== "CHECKED_IN") ? (
+                <div className="flex items-center gap-2 pt-3 border-t border-border-light">
+                  {app.status === "APPROVED" && !app.is_backup && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleAction(app.id, "confirm")}
+                      loading={actionId === app.id}
+                    >
+                      {t("confirm.button")}
+                    </Button>
+                  )}
+                  {(tab === "pending" ||
+                    (tab === "approved" &&
+                      app.status !== "CHECKED_IN")) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-danger hover:text-danger hover:bg-danger/5"
+                      onClick={() => {
+                        if (confirm(t("apply.cancel_confirm")))
+                          handleAction(app.id, "cancel");
+                      }}
+                      loading={actionId === app.id}
+                    >
+                      {t("apply.cancel")}
+                    </Button>
+                  )}
                   <Link
                     href={`/shifts/${app.shift_id}`}
-                    className="flex items-start gap-3 min-w-0 group"
+                    className="flex items-center gap-1 text-sm text-foreground-tertiary hover:text-foreground-secondary transition-colors mr-auto"
                   >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary">
-                      {(app.business_name || "?").charAt(0)}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-                        {app.shift_title}
-                      </div>
-                      <p className="text-sm text-foreground-secondary truncate">
-                        {app.business_name}
-                      </p>
-                    </div>
+                    {t("feed.view_details")}
+                    <ChevronLeft className="h-3.5 w-3.5" />
                   </Link>
-                  {statusBadge(app.status, app.is_backup)}
                 </div>
-
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground-secondary mb-3">
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5 text-foreground-tertiary" />
-                    {fmt(app.shift_start_at)}
-                  </span>
-                  {app.shift_city && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5 text-foreground-tertiary" />
-                      {app.shift_city}
-                    </span>
-                  )}
-                  <span className="flex items-center gap-1 font-medium text-foreground">
-                    <Banknote className="h-3.5 w-3.5 text-primary" />
-                    {t("general.currency")}
-                    {app.shift_pay_rate}{" "}
-                    <span className="font-normal text-foreground-secondary">
-                      {app.shift_pay_type === "hourly"
-                        ? t("shift.per_hour")
-                        : t("shift.total")}
-                    </span>
-                  </span>
-                </div>
-
-                {(app.status === "APPROVED" && !app.is_backup) ||
-                tab === "pending" ||
-                (tab === "approved" && app.status !== "CHECKED_IN") ? (
-                  <div className="flex items-center gap-2 pt-3 border-t border-border-light">
-                    {app.status === "APPROVED" && !app.is_backup && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleAction(app.id, "confirm")}
-                        loading={actionId === app.id}
-                      >
-                        {t("confirm.button")}
-                      </Button>
-                    )}
-                    {(tab === "pending" ||
-                      (tab === "approved" &&
-                        app.status !== "CHECKED_IN")) && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-danger hover:text-danger hover:bg-danger/5"
-                        onClick={() => {
-                          if (confirm(t("apply.cancel_confirm")))
-                            handleAction(app.id, "cancel");
-                        }}
-                        loading={actionId === app.id}
-                      >
-                        {t("apply.cancel")}
-                      </Button>
-                    )}
-                    <Link
-                      href={`/shifts/${app.shift_id}`}
-                      className="flex items-center gap-1 text-sm text-foreground-tertiary hover:text-foreground-secondary transition-colors mr-auto"
-                    >
-                      {t("feed.view_details")}
-                      <ChevronLeft className="h-3.5 w-3.5" />
-                    </Link>
-                  </div>
-                ) : null}
-              </div>
+              ) : null}
             </div>
           ))}
         </div>

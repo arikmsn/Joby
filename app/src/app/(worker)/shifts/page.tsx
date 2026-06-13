@@ -7,12 +7,9 @@ import Link from "next/link";
 import {
   MapPin,
   Clock,
-  Users,
-  Search,
   AlertTriangle,
   SlidersHorizontal,
   X,
-  Sparkles,
   CalendarClock,
   Zap,
 } from "lucide-react";
@@ -95,6 +92,11 @@ export default function WorkerShiftFeed() {
     });
   }
 
+  function formatPay(rate: number) {
+    const n = Number(rate);
+    return n % 1 === 0 ? n.toString() : n.toFixed(2);
+  }
+
   function formatDuration(start: string, end: string) {
     const ms = new Date(end).getTime() - new Date(start).getTime();
     const hours = Math.round((ms / 3600000) * 10) / 10;
@@ -123,107 +125,93 @@ export default function WorkerShiftFeed() {
 
   const firstName = user?.full_name?.split(" ")[0];
 
-  function ShiftCard({ shift }: { shift: FeedShift }) {
+  function ShiftRow({ shift }: { shift: FeedShift }) {
     const spotsLeft = shift.workers_needed - shift.slots_filled;
     const soon = isStartingSoon(shift.start_at);
-    const initial = (shift.business_name || shift.employer_name || "?").charAt(0);
+    const showMeta = shift.has_sos || soon || spotsLeft <= 1;
 
     return (
-      <Link href={`/shifts/${shift.id}`}>
-        <div
-          className={`relative overflow-hidden rounded-2xl border bg-surface transition-all active:scale-[0.99] hover:shadow-card-hover ${
-            shift.has_sos
-              ? "border-danger/30 hover:border-danger/50"
-              : "border-border hover:border-primary/30"
-          }`}
-        >
-          {/* Accent bar */}
-          <div
-            className={`absolute inset-y-0 right-0 w-1 ${
-              shift.has_sos ? "bg-danger" : "bg-primary/30"
-            }`}
-          />
-
-          <div className="p-4 pr-5">
-            <div className="flex items-start justify-between gap-3 mb-2.5">
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary">
-                  {initial}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                    <h3 className="font-semibold text-foreground truncate">
-                      {shift.title}
-                    </h3>
-                  </div>
-                  <p className="text-sm text-foreground-secondary truncate">
-                    {shift.business_name} · {shift.role_tag}
-                  </p>
-                </div>
-              </div>
-
-              {/* Pay — the hero number */}
-              <div className="shrink-0 text-left">
-                <div className="flex items-center gap-1 text-lg font-bold text-foreground" dir="ltr">
-                  {t("general.currency")}{shift.pay_rate}
-                </div>
-                <div className="text-xs text-foreground-tertiary text-right">
-                  {shift.pay_type === "hourly" ? t("shift.per_hour") : t("shift.total")}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-foreground-secondary mb-3">
-              <span className="flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-foreground-tertiary" />
+      <Link
+        href={`/shifts/${shift.id}`}
+        className="block px-4 py-3.5 active:bg-background transition-colors"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="font-semibold text-foreground truncate">{shift.title}</h3>
+            <p className="text-sm text-foreground-secondary truncate mt-0.5">
+              {shift.business_name} · {shift.role_tag}
+            </p>
+            <div className="flex items-center gap-3 text-xs text-foreground-tertiary mt-1.5">
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
                 {formatTime(shift.start_at)} · {formatDuration(shift.start_at, shift.end_at)}
               </span>
-              <span className="flex items-center gap-1.5 truncate">
-                <MapPin className="h-3.5 w-3.5 text-foreground-tertiary shrink-0" />
+              <span className="flex items-center gap-1 truncate">
+                <MapPin className="h-3 w-3 shrink-0" />
                 {shift.city || shift.location_name || shift.address}
               </span>
             </div>
+          </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              {shift.has_sos && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-danger px-2.5 py-1 text-xs font-bold text-white animate-pulse">
-                  <AlertTriangle className="h-3 w-3" />
-                  {t("sos.badge")}
-                </span>
-              )}
-              {!shift.has_sos && soon && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1 text-xs font-semibold text-warning">
-                  <Zap className="h-3 w-3" />
-                  {t("feed.starting_soon")}
-                </span>
-              )}
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
-                  spotsLeft <= 1
-                    ? "bg-warning/10 text-warning"
-                    : "bg-gray-100 text-foreground-secondary"
-                }`}
-              >
-                <Users className="h-3 w-3" />
-                {spotsLeft <= 0
-                  ? t("feed.full")
-                  : spotsLeft === 1
-                    ? t("feed.spots_left_one")
-                    : `${spotsLeft} ${t("feed.spots_left")}`}
-              </span>
+          <div className="shrink-0 text-left">
+            <div className="text-lg font-bold text-foreground" dir="ltr">
+              {t("general.currency")}{formatPay(shift.pay_rate)}
+            </div>
+            <div className="text-[11px] text-foreground-tertiary text-right">
+              {shift.pay_type === "hourly" ? t("shift.per_hour") : t("shift.total")}
             </div>
           </div>
         </div>
+
+        {showMeta && (
+          <div className="flex items-center gap-3 flex-wrap mt-2">
+            {shift.has_sos && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-danger px-2.5 py-0.5 text-xs font-bold text-white">
+                <AlertTriangle className="h-3 w-3" />
+                {t("sos.badge")}
+              </span>
+            )}
+            {!shift.has_sos && soon && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-warning">
+                <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+                {t("feed.starting_soon")}
+              </span>
+            )}
+            <span
+              className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+                spotsLeft <= 1 ? "text-warning" : "text-foreground-tertiary"
+              }`}
+            >
+              {spotsLeft > 1 && <span className="h-1.5 w-1.5 rounded-full bg-foreground-tertiary" />}
+              {spotsLeft <= 1 && <span className="h-1.5 w-1.5 rounded-full bg-warning" />}
+              {spotsLeft <= 0
+                ? t("feed.full")
+                : spotsLeft === 1
+                  ? t("feed.spots_left_one")
+                  : `${spotsLeft} ${t("feed.spots_left")}`}
+            </span>
+          </div>
+        )}
       </Link>
     );
   }
 
   function SectionHeader({ icon, label, count }: { icon: React.ReactNode; label: string; count: number }) {
     return (
-      <div className="flex items-center gap-2 px-1 mb-2 mt-1">
+      <div className="flex items-center gap-2 px-1 mb-2">
         {icon}
-        <h2 className="text-sm font-bold text-foreground">{label}</h2>
-        <span className="text-xs text-foreground-tertiary">({count})</span>
+        <h2 className="text-sm font-semibold text-foreground">{label}</h2>
+        <span className="text-xs text-foreground-tertiary">{count}</span>
+      </div>
+    );
+  }
+
+  function Section({ shifts: list }: { shifts: FeedShift[] }) {
+    return (
+      <div className="rounded-2xl border border-border bg-surface overflow-hidden divide-y divide-border-light">
+        {list.map((s) => (
+          <ShiftRow key={s.id} shift={s} />
+        ))}
       </div>
     );
   }
@@ -231,32 +219,23 @@ export default function WorkerShiftFeed() {
   const hasAnyResults = shifts.length > 0;
 
   return (
-    <div className="space-y-5">
-      {/* Hero */}
-      <div className="hero-gradient rounded-2xl p-4 text-white shadow-card relative overflow-hidden">
-        <div className="absolute -left-8 -top-8 h-28 w-28 rounded-full bg-white/10" />
-        <div className="absolute -left-2 bottom-0 h-16 w-16 rounded-full bg-white/5" />
-        <div className="relative">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-white/80">
-                {t("feed.greeting")}{firstName ? `, ${firstName}` : ""} 👋
-              </p>
-              <h1 className="text-lg font-bold mt-0.5">{t("feed.subtitle")}</h1>
-            </div>
-            <span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" />
-              {t("feed.live_tag")}
-            </span>
-          </div>
-          {!loading && (
-            <div className="mt-3 flex items-center gap-2 text-sm">
-              <Sparkles className="h-4 w-4 text-white/80" />
-              <span className="font-semibold">{shifts.length}</span>
-              <span className="text-white/80">{t("feed.title")}</span>
-            </div>
-          )}
-        </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="pt-1 space-y-1">
+        <p className="text-sm text-foreground-secondary">
+          {t("feed.greeting")}{firstName ? `, ${firstName}` : ""}
+        </p>
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">
+          {t("feed.subtitle")}
+        </h1>
+        {!loading && hasAnyResults && (
+          <p className="text-sm text-foreground-tertiary pt-0.5">
+            {shifts.length} {t("feed.title")}
+            {urgent.length > 0 && (
+              <span className="text-danger font-medium"> · {urgent.length} {t("feed.section_urgent")}</span>
+            )}
+          </p>
+        )}
       </div>
 
       {/* Filter chips */}
@@ -345,10 +324,7 @@ export default function WorkerShiftFeed() {
           <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       ) : !hasAnyResults ? (
-        <div className="text-center py-16 px-4">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-            <Search className="h-7 w-7 text-primary" />
-          </div>
+        <div className="text-center py-20 px-4">
           <p className="font-semibold text-foreground">
             {activeFilterCount > 0 ? t("feed.no_match") : t("feed.no_shifts")}
           </p>
@@ -373,11 +349,7 @@ export default function WorkerShiftFeed() {
                 label={t("feed.section_urgent")}
                 count={urgent.length}
               />
-              <div className="space-y-2.5">
-                {urgent.map((s) => (
-                  <ShiftCard key={s.id} shift={s} />
-                ))}
-              </div>
+              <Section shifts={urgent} />
             </div>
           )}
           {today.length > 0 && (
@@ -387,11 +359,7 @@ export default function WorkerShiftFeed() {
                 label={t("feed.section_today")}
                 count={today.length}
               />
-              <div className="space-y-2.5">
-                {today.map((s) => (
-                  <ShiftCard key={s.id} shift={s} />
-                ))}
-              </div>
+              <Section shifts={today} />
             </div>
           )}
           {upcoming.length > 0 && (
@@ -401,11 +369,7 @@ export default function WorkerShiftFeed() {
                 label={t("feed.section_upcoming")}
                 count={upcoming.length}
               />
-              <div className="space-y-2.5">
-                {upcoming.map((s) => (
-                  <ShiftCard key={s.id} shift={s} />
-                ))}
-              </div>
+              <Section shifts={upcoming} />
             </div>
           )}
         </div>

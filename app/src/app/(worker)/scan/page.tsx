@@ -33,26 +33,18 @@ export default function ScanPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-foreground">{t("qr.scan_title")}</h1>
-      </div>
+    <div className="space-y-6">
+      <h1 className="text-xl font-bold text-foreground">{t("qr.scan_title")}</h1>
 
       {result ? (
-        <div className="bg-surface rounded-2xl border border-border p-6 text-center space-y-4">
-          <div
-            className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${
-              result.ok ? "bg-success/10" : "bg-danger/10"
-            }`}
-          >
-            {result.ok ? (
-              <CheckCircle2 className="h-8 w-8 text-success" />
-            ) : (
-              <XCircle className="h-8 w-8 text-danger" />
-            )}
-          </div>
+        <div className="text-center py-10 space-y-3">
+          {result.ok ? (
+            <CheckCircle2 className="h-10 w-10 text-success mx-auto" />
+          ) : (
+            <XCircle className="h-10 w-10 text-danger mx-auto" />
+          )}
           <div>
-            <p className="font-semibold text-foreground">
+            <p className="font-semibold text-foreground text-lg">
               {result.ok ? t("qr.success_title") : t("qr.error_title")}
             </p>
             <p className="text-sm text-foreground-secondary mt-1">{result.message}</p>
@@ -62,37 +54,33 @@ export default function ScanPage() {
           </Button>
         </div>
       ) : (
-        <div className="hero-gradient rounded-2xl p-6 text-center text-white shadow-card relative overflow-hidden">
-          <div className="absolute -left-8 -top-8 h-28 w-28 rounded-full bg-white/10" />
-          <div className="relative space-y-4">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/15">
-              <ScanLine className="h-8 w-8 text-white" />
-            </div>
-            <p className="text-sm text-white/85 max-w-xs mx-auto">
+        <div className="space-y-5 pt-4">
+          <div className="text-center space-y-2">
+            <ScanLine className="h-10 w-10 text-primary mx-auto" />
+            <p className="text-sm text-foreground-secondary max-w-xs mx-auto">
               {t("qr.scan_intro")}
             </p>
+          </div>
 
-            <div className="space-y-2 pt-1">
-              <div className="flex items-center gap-2 rounded-xl bg-white/95 px-3 py-2.5">
-                <QrCode className="h-4 w-4 text-foreground-tertiary shrink-0" />
-                <input
-                  type="text"
-                  dir="ltr"
-                  className="w-full bg-transparent text-sm text-left font-mono text-foreground placeholder:text-foreground-tertiary focus:outline-none"
-                  placeholder={t("qr.placeholder")}
-                  value={manualToken}
-                  onChange={(e) => setManualToken(e.target.value)}
-                />
-              </div>
-              <Button
-                className="w-full bg-white text-primary hover:bg-white/90 shadow-none"
-                onClick={() => handleScan(manualToken)}
-                loading={scanning}
-                disabled={!manualToken.trim()}
-              >
-                {t("qr.scan")}
-              </Button>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5">
+              <QrCode className="h-4 w-4 text-foreground-tertiary shrink-0" />
+              <input
+                type="text"
+                className="w-full bg-transparent text-sm text-foreground placeholder:text-foreground-tertiary focus:outline-none"
+                placeholder={t("qr.placeholder")}
+                value={manualToken}
+                onChange={(e) => setManualToken(e.target.value)}
+              />
             </div>
+            <Button
+              className="w-full"
+              onClick={() => handleScan(manualToken)}
+              loading={scanning}
+              disabled={!manualToken.trim()}
+            >
+              {t("qr.scan")}
+            </Button>
           </div>
         </div>
       )}

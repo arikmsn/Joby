@@ -40,15 +40,19 @@ export function BottomNavLink({ href, icon, label }: NavLinkProps) {
   return (
     <Link
       href={href}
-      className={cn(
-        "flex flex-1 flex-col items-center gap-0.5 rounded-xl py-2 text-[11px] transition-all min-w-[56px]",
-        isActive
-          ? "bg-primary/10 text-primary font-semibold"
-          : "text-foreground-tertiary hover:text-foreground-secondary"
-      )}
+      className="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px]"
     >
-      {icon}
-      <span>{label}</span>
+      <span className={cn("transition-colors", isActive ? "text-primary" : "text-foreground-tertiary")}>
+        {icon}
+      </span>
+      <span
+        className={cn(
+          "transition-colors",
+          isActive ? "text-primary font-semibold" : "text-foreground-tertiary"
+        )}
+      >
+        {label}
+      </span>
     </Link>
   );
 }

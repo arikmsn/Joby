@@ -63,7 +63,7 @@ input[dir="ltr"] {
   }
 
   .hero-gradient {
-    background: linear-gradient(135deg, var(--primary) 0%, #0f766e 55%, #134e4a 100%);
+    background: linear-gradient(160deg, #0f766e 0%, #134e4a 100%);
   }
 
   .no-scrollbar::-webkit-scrollbar {
