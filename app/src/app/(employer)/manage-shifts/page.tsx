@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useOccupations } from "@/lib/use-occupations";
 import { t } from "@/lib/i18n/he";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -44,6 +45,7 @@ function statusLabel(status: string) {
 
 export default function EmployerShiftsPage() {
   const { token } = useAuth();
+  const { occupationLabel } = useOccupations();
   const [shifts, setShifts] = useState<ShiftItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -94,7 +96,7 @@ export default function EmployerShiftsPage() {
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div>
                   <h3 className="font-semibold text-foreground">{s.title}</h3>
-                  <p className="text-sm text-foreground-secondary">{s.role_tag}</p>
+                  <p className="text-sm text-foreground-secondary">{occupationLabel(s.role_tag)}</p>
                 </div>
                 <Badge variant={statusVariant(s.status)}>
                   {statusLabel(s.status)}

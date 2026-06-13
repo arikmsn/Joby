@@ -331,6 +331,7 @@ const he = {
   "profile.rating_count": "מספר דירוגים",
   "profile.city": "עיר",
   "profile.experience": "ניסיון",
+  "profile.no_occupations": "לא נבחרו תחומי עיסוק",
 } as const;
 
 export type TranslationKey = keyof typeof he;

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useOccupations } from "@/lib/use-occupations";
 import { t } from "@/lib/i18n/he";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +49,7 @@ export default function ShiftDetailsPage() {
   const router = useRouter();
   const shiftId = params.id as string;
   const { token } = useAuth();
+  const { occupationLabel } = useOccupations();
   const [shift, setShift] = useState<ShiftDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -155,7 +157,7 @@ export default function ShiftDetailsPage() {
       <div className="space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-semibold uppercase tracking-wide text-primary">
-            {shift.role_tag}
+            {occupationLabel(shift.role_tag)}
           </span>
           {shift.has_sos && (
             <span className="inline-flex items-center gap-1 rounded-full bg-danger px-2.5 py-0.5 text-xs font-bold text-white">

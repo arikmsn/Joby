@@ -1,15 +1,56 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { t } from "@/lib/i18n/he";
 import { TrustBadge } from "@/components/ui/trust-badge";
 import { Button } from "@/components/ui/button";
-import { User, MapPin, LogOut, Shield } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { OccupationPicker, type OccupationOption } from "@/components/ui/occupation-picker";
+import { User, MapPin, LogOut, Shield, Pencil } from "lucide-react";
 import type { WorkerProfile } from "@/lib/types";
 
 export default function ProfilePage() {
-  const { user, profile, logout } = useAuth();
+  const { user, profile, logout, token, refreshUser } = useAuth();
   const workerProfile = profile as WorkerProfile | null;
+
+  const [occupations, setOccupations] = useState<OccupationOption[]>([]);
+  const [editing, setEditing] = useState(false);
+  const [tags, setTags] = useState<string[]>(workerProfile?.experience_tags || []);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/occupations")
+      .then((res) => res.json())
+      .then((data) => setOccupations(data.occupations || []))
+      .catch(() => setOccupations([]));
+  }, []);
+
+  useEffect(() => {
+    setTags(workerProfile?.experience_tags || []);
+  }, [workerProfile?.experience_tags]);
+
+  const labelMap = new Map(occupations.map((o) => [o.key, o.label_he]));
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/workers/me", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ experience_tags: tags }),
+      });
+      if (res.ok) {
+        await refreshUser();
+        setEditing(false);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
 
   if (!user) return null;
 
@@ -73,6 +114,62 @@ export default function ProfilePage() {
                   {t("profile.cancel_count")}
                 </div>
               </div>
+            </div>
+
+            <div className="pt-3">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-foreground">
+                  {t("profile.experience")}
+                </h3>
+                {!editing && (
+                  <button
+                    onClick={() => setEditing(true)}
+                    className="text-foreground-tertiary hover:text-primary transition-colors"
+                    aria-label={t("general.edit")}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {editing ? (
+                <div className="space-y-3">
+                  <OccupationPicker
+                    options={occupations}
+                    value={tags}
+                    onChange={setTags}
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleSave} loading={saving}>
+                      {t("general.save")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setTags(workerProfile.experience_tags || []);
+                        setEditing(false);
+                      }}
+                    >
+                      {t("general.cancel")}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {(workerProfile.experience_tags || []).length === 0 ? (
+                    <p className="text-sm text-foreground-secondary">
+                      {t("profile.no_occupations")}
+                    </p>
+                  ) : (
+                    (workerProfile.experience_tags || []).map((tag) => (
+                      <Badge key={tag} variant="secondary">
+                        {labelMap.get(tag) || tag}
+                      </Badge>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

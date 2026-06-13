@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useOccupations } from "@/lib/use-occupations";
 import { t } from "@/lib/i18n/he";
 import Link from "next/link";
 import {
@@ -34,6 +35,7 @@ interface FeedShift {
 
 export default function WorkerShiftFeed() {
   const { token, user } = useAuth();
+  const { occupationLabel } = useOccupations();
   const [shifts, setShifts] = useState<FeedShift[]>([]);
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState("");
@@ -139,7 +141,7 @@ export default function WorkerShiftFeed() {
           <div className="min-w-0">
             <h3 className="font-semibold text-foreground truncate">{shift.title}</h3>
             <p className="text-sm text-foreground-secondary truncate mt-0.5">
-              {shift.business_name} · {shift.role_tag}
+              {shift.business_name} · {occupationLabel(shift.role_tag)}
             </p>
             <div className="flex items-center gap-3 text-xs text-foreground-tertiary mt-1.5">
               <span className="flex items-center gap-1">
@@ -261,7 +263,7 @@ export default function WorkerShiftFeed() {
                   : "bg-surface text-foreground-secondary border-border"
               }`}
             >
-              {r}
+              {occupationLabel(r)}
             </button>
           ))}
         </div>

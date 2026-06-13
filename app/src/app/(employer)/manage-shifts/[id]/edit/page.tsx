@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useOccupations } from "@/lib/use-occupations";
 import { t } from "@/lib/i18n/he";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ export default function EditShiftPage() {
   const params = useParams();
   const shiftId = params.id as string;
   const { token } = useAuth();
+  const { occupations, occupationLabel } = useOccupations();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -185,7 +187,22 @@ export default function EditShiftPage() {
         <CardContent className="pt-6">
           <div className="space-y-4">
             <Input id="title" label={t("shift.title")} value={form.title} onChange={(e) => set("title", e.target.value)} disabled={!isDraft} />
-            <Input id="role_tag" label={t("shift.role_tag")} value={form.role_tag} onChange={(e) => set("role_tag", e.target.value)} disabled={!isDraft} />
+            {isDraft ? (
+              <div>
+                <label htmlFor="role_tag" className="block text-sm font-medium text-foreground mb-1">{t("shift.role_tag")}</label>
+                <select id="role_tag" className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" value={form.role_tag} onChange={(e) => set("role_tag", e.target.value)}>
+                  <option value="" disabled>{t("shift.role_tag")}</option>
+                  {occupations.map((occ) => (
+                    <option key={occ.key} value={occ.key}>{occ.label_he}</option>
+                  ))}
+                  {form.role_tag && !occupations.some((o) => o.key === form.role_tag) && (
+                    <option value={form.role_tag}>{form.role_tag}</option>
+                  )}
+                </select>
+              </div>
+            ) : (
+              <Input id="role_tag" label={t("shift.role_tag")} value={occupationLabel(form.role_tag)} disabled />
+            )}
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-foreground mb-1">{t("shift.description")}</label>
               <textarea id="description" className="w-full rounded-lg border border-border px-3 py-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors disabled:bg-background disabled:text-foreground-tertiary" value={form.description} onChange={(e) => set("description", e.target.value)} disabled={isCancelled} />

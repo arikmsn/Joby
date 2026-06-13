@@ -12,6 +12,7 @@ import {
   decimal,
   integer,
   date,
+  jsonb,
 } from "drizzle-orm/pg-core";
 
 // --- Users ---
@@ -24,6 +25,7 @@ export const users = pgTable("users", {
   role: varchar("role", { length: 20 }).notNull(),
   avatar_url: text("avatar_url"),
   is_active: boolean("is_active").default(true),
+  created_by_admin: boolean("created_by_admin").notNull().default(false),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
@@ -148,5 +150,47 @@ export const ratings = pgTable("ratings", {
   score: integer("score").notNull(),
   flag: varchar("flag", { length: 50 }),
   comment: text("comment"),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+// --- Occupation Catalog ---
+export const occupationCatalog = pgTable("occupation_catalog", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  key: varchar("key", { length: 50 }).unique().notNull(),
+  label_he: varchar("label_he", { length: 100 }).notNull(),
+  sort_order: integer("sort_order").notNull().default(0),
+  is_active: boolean("is_active").notNull().default(true),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+// --- Incidents ---
+export const incidents = pgTable("incidents", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  incident_type: varchar("incident_type", { length: 30 }).notNull(),
+  severity: varchar("severity", { length: 20 }).notNull().default("MEDIUM"),
+  status: varchar("status", { length: 20 }).notNull().default("OPEN"),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  related_user_id: uuid("related_user_id").references(() => users.id, { onDelete: "set null" }),
+  related_shift_id: uuid("related_shift_id").references(() => shifts.id, { onDelete: "set null" }),
+  related_application_id: uuid("related_application_id").references(() => applications.id, { onDelete: "set null" }),
+  created_by_user_id: uuid("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  assigned_admin_id: uuid("assigned_admin_id").references(() => users.id, { onDelete: "set null" }),
+  resolution_notes: text("resolution_notes"),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  resolved_at: timestamp("resolved_at", { withTimezone: true }),
+});
+
+// --- Notifications ---
+export const notifications = pgTable("notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: varchar("type", { length: 50 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  body: text("body"),
+  payload: jsonb("payload"),
+  channel: varchar("channel", { length: 20 }).notNull().default("in_app"),
+  is_read: boolean("is_read").notNull().default(false),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });

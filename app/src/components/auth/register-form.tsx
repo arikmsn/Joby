@@ -4,6 +4,7 @@ import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { OccupationPicker, type OccupationOption } from "@/components/ui/occupation-picker";
 import { useAuth } from "@/lib/auth-context";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { t } from "@/lib/i18n/he";
@@ -40,7 +41,15 @@ function RegisterFormInner({ forcedRole }: { forcedRole?: AuthRole }) {
   const [businessType, setBusinessType] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
-  const [experienceTags, setExperienceTags] = useState("");
+  const [experienceTags, setExperienceTags] = useState<string[]>([]);
+  const [occupations, setOccupations] = useState<OccupationOption[]>([]);
+
+  useEffect(() => {
+    fetch("/api/occupations")
+      .then((res) => res.json())
+      .then((data) => setOccupations(data.occupations || []))
+      .catch(() => setOccupations([]));
+  }, []);
 
   // Already-logged-in users visiting an auth page go straight to their system.
   useEffect(() => {
@@ -65,12 +74,7 @@ function RegisterFormInner({ forcedRole }: { forcedRole?: AuthRole }) {
         body.address = address || undefined;
       } else {
         body.city = city || undefined;
-        body.experience_tags = experienceTags
-          ? experienceTags
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean)
-          : [];
+        body.experience_tags = experienceTags;
       }
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -225,11 +229,11 @@ function RegisterFormInner({ forcedRole }: { forcedRole?: AuthRole }) {
               value={city}
               onChange={(e) => setCity(e.target.value)}
             />
-            <Input
-              id="experience_tags"
+            <OccupationPicker
               label={t("auth.experience_tags")}
+              options={occupations}
               value={experienceTags}
-              onChange={(e) => setExperienceTags(e.target.value)}
+              onChange={setExperienceTags}
             />
           </>
         )}

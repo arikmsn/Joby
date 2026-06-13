@@ -1,18 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { t } from "@/lib/i18n/he";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import type { OccupationOption } from "@/components/ui/occupation-picker";
 
 export default function CreateShiftPage() {
   const router = useRouter();
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [occupations, setOccupations] = useState<OccupationOption[]>([]);
+
+  useEffect(() => {
+    fetch("/api/occupations")
+      .then((res) => res.json())
+      .then((data) => setOccupations(data.occupations || []))
+      .catch(() => setOccupations([]));
+  }, []);
 
   const [form, setForm] = useState({
     title: "",
@@ -90,7 +99,15 @@ export default function CreateShiftPage() {
         <CardContent>
           <div className="space-y-4">
             <Input id="title" label={t("shift.title")} value={form.title} onChange={(e) => set("title", e.target.value)} />
-            <Input id="role_tag" label={t("shift.role_tag")} placeholder="מלצר, ברמן, טבח..." value={form.role_tag} onChange={(e) => set("role_tag", e.target.value)} />
+            <div>
+              <label htmlFor="role_tag" className="block text-sm font-medium text-foreground mb-1">{t("shift.role_tag")}</label>
+              <select id="role_tag" className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" value={form.role_tag} onChange={(e) => set("role_tag", e.target.value)}>
+                <option value="" disabled>{t("shift.role_tag")}</option>
+                {occupations.map((occ) => (
+                  <option key={occ.key} value={occ.key}>{occ.label_he}</option>
+                ))}
+              </select>
+            </div>
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-foreground mb-1">{t("shift.description")}</label>
               <textarea id="description" className="w-full rounded-lg border border-border px-3 py-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" value={form.description} onChange={(e) => set("description", e.target.value)} />

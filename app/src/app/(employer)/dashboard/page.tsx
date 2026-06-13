@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useOccupations } from "@/lib/use-occupations";
 import { t } from "@/lib/i18n/he";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -79,6 +80,7 @@ function statusLabel(status: string) {
 }
 
 function ShiftRow({ shift }: { shift: DashboardShift }) {
+  const { occupationLabel } = useOccupations();
   const fillPercent = shift.workers_needed > 0
     ? Math.round((shift.slots_filled / shift.workers_needed) * 100)
     : 0;
@@ -91,7 +93,7 @@ function ShiftRow({ shift }: { shift: DashboardShift }) {
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0">
           <h3 className="font-semibold text-foreground truncate">{shift.title}</h3>
-          <p className="text-sm text-foreground-secondary">{shift.role_tag}</p>
+          <p className="text-sm text-foreground-secondary">{occupationLabel(shift.role_tag)}</p>
         </div>
         <Badge variant={statusVariant(shift.status)}>
           {statusLabel(shift.status)}

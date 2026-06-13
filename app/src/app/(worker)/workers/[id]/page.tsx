@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { TrustBadge } from "@/components/ui/trust-badge";
 import { t } from "@/lib/i18n/he";
 import { User } from "lucide-react";
+import type { OccupationOption } from "@/components/ui/occupation-picker";
 
 interface WorkerProfile {
   id: string;
@@ -44,6 +45,19 @@ export default function WorkerProfilePage() {
   const [worker, setWorker] = useState<WorkerProfile | null>(null);
   const [ratings, setRatings] = useState<RatingItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [occupations, setOccupations] = useState<OccupationOption[]>([]);
+
+  useEffect(() => {
+    fetch("/api/occupations")
+      .then((res) => res.json())
+      .then((data) => setOccupations(data.occupations || []))
+      .catch(() => setOccupations([]));
+  }, []);
+
+  const occupationLabel = useCallback(
+    (key: string) => occupations.find((o) => o.key === key)?.label_he || key,
+    [occupations]
+  );
 
   const fetchData = useCallback(async () => {
     if (!token) return;
@@ -142,7 +156,7 @@ export default function WorkerProfilePage() {
             <div className="flex flex-wrap gap-1">
               {worker.experience_tags.map((tag) => (
                 <Badge key={tag} variant="secondary">
-                  {tag}
+                  {occupationLabel(tag)}
                 </Badge>
               ))}
             </div>

@@ -24,6 +24,7 @@ export interface User {
   role: UserRole;
   avatar_url: string | null;
   is_active: boolean;
+  created_by_admin: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -137,13 +138,20 @@ export interface SOSBroadcast {
   shift_id: string;
   employer_id: string;
   slots_needed: number;
-  radius_km: number;
-  min_trust: number;
   sent_to_count: number;
   filled_count: number;
   status: SOSStatus;
   created_at: string;
   expires_at: string | null;
+}
+
+export interface OccupationCatalogEntry {
+  id: string;
+  key: string;
+  label_he: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
 }
 
 export interface Incident {
@@ -183,7 +191,7 @@ export interface Notification {
   payload: Record<string, unknown> | null;
   channel: NotificationChannel;
   is_read: boolean;
-  sent_at: string;
+  created_at: string;
 }
 
 // --- API Response Types ---

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useOccupations } from "@/lib/use-occupations";
 import { t } from "@/lib/i18n/he";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -94,6 +95,7 @@ function statusBadge(status: string, isBackup: boolean) {
 
 export default function MyShiftsPage() {
   const { token } = useAuth();
+  const { occupationLabel } = useOccupations();
   const [apps, setApps] = useState<MyApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("approved");
@@ -241,7 +243,7 @@ export default function MyShiftsPage() {
                     {app.shift_title}
                   </div>
                   <p className="text-sm text-foreground-secondary truncate mt-0.5">
-                    {app.business_name}
+                    {app.business_name} · {occupationLabel(app.shift_role_tag)}
                   </p>
                 </Link>
                 {statusBadge(app.status, app.is_backup)}
