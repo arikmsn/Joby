@@ -35,6 +35,7 @@ export interface EmployerProfile {
   business_name: string;
   business_type: string | null;
   address: string | null;
+  city: string | null;
   lat: number | null;
   lng: number | null;
   logo_url: string | null;

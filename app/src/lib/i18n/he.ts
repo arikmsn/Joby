@@ -71,6 +71,10 @@ const he = {
   "nav.users": "משתמשים",
   "nav.incidents": "אירועים",
   "nav.log": "יומן פעולות",
+  "nav.overview": "סקירה כללית",
+  "nav.employers": "מעסיקים",
+  "nav.workers": "עובדים",
+  "nav.catalog": "קטלוג תחומים",
 
   // Shifts
   "shift.create": "צור משמרת",
@@ -198,6 +202,66 @@ const he = {
   "admin.unsuspend": "בטל השעיה",
   "admin.resolve": "פתור",
   "admin.dismiss": "סגור",
+  "admin.incidents.empty": "אין אירועים",
+
+  // Admin - Incident types
+  "admin.incident_type.no_show": "אי-הגעה",
+  "admin.incident_type.low_trust": "ציון אמינות נמוך",
+  "admin.incident_type.qr_failure": "כשל QR",
+  "admin.incident_type.shift_unfilled": "משמרת לא מאוישת",
+  "admin.incident_type.employer_complaint": "תלונת מעסיק",
+  "admin.incident_type.worker_complaint": "תלונת עובד",
+  "admin.incident_type.manual_review": "סקירה ידנית",
+
+  // Admin - Incident severity
+  "admin.incident_severity.low": "נמוכה",
+  "admin.incident_severity.medium": "בינונית",
+  "admin.incident_severity.high": "גבוהה",
+  "admin.incident_severity.critical": "קריטית",
+
+  // Admin - Incident status
+  "admin.incident_status.open": "פתוח",
+  "admin.incident_status.in_review": "בבדיקה",
+  "admin.incident_status.resolved": "טופל",
+  "admin.incident_status.dismissed": "נסגר",
+
+  // Admin - Overview
+  "admin.overview.employers": "מעסיקים",
+  "admin.overview.workers": "עובדים",
+  "admin.overview.total_shifts": "סך משמרות",
+  "admin.overview.pending_applications": "מועמדויות בהמתנה",
+  "admin.overview.active_sos": "קריאות SOS פעילות",
+  "admin.overview.open_incidents": "אירועים פתוחים",
+  "admin.overview.shifts_by_status": "משמרות לפי סטטוס",
+
+  // Admin - Employers
+  "admin.employers.create": "הוסף מעסיק",
+  "admin.employers.business_name": "שם העסק",
+  "admin.employers.business_type": "סוג העסק",
+  "admin.employers.shift_counts": "משמרות לפי סטטוס",
+
+  // Admin - Workers
+  "admin.workers.create": "הוסף עובד",
+
+  // Admin - Shifts
+  "admin.shifts.employer": "מעסיק",
+
+  // Admin - Catalog
+  "admin.catalog.key": "מפתח (אנגלית)",
+  "admin.catalog.label": "שם בעברית",
+  "admin.catalog.add": "הוסף תחום",
+
+  // Admin - Common
+  "admin.common.active": "פעיל",
+  "admin.common.inactive": "לא פעיל",
+  "admin.common.full_name": "שם מלא",
+  "admin.common.phone": "טלפון",
+  "admin.common.city": "עיר",
+  "admin.common.address": "כתובת",
+  "admin.common.activate": "הפעל",
+  "admin.common.deactivate": "השבת",
+  "admin.common.admin_created": "נוצר על ידי מנהל",
+  "admin.common.all": "הכל",
 
   // General
   "general.loading": "טוען...",

@@ -108,6 +108,9 @@ async function main() {
   console.log("== Altering users table ==");
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_by_admin boolean not null default false`;
 
+  console.log("== Altering employer_profiles table ==");
+  await sql`ALTER TABLE employer_profiles ADD COLUMN IF NOT EXISTS city varchar(100)`;
+
   console.log("== Seeding occupation_catalog ==");
   for (let i = 0; i < DEFAULT_OCCUPATIONS.length; i++) {
     const { key, label_he } = DEFAULT_OCCUPATIONS[i];

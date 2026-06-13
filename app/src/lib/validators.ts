@@ -127,6 +127,96 @@ export const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+// --- Admin ---
+
+export const adminListQuerySchema = z.object({
+  q: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const adminCreateEmployerSchema = z.object({
+  phone: z
+    .string()
+    .min(9)
+    .max(15)
+    .regex(/^\+?[0-9]+$/, "מספר טלפון לא תקין"),
+  full_name: z.string().min(2).max(255),
+  business_name: z.string().min(2).max(255),
+  business_type: z.string().max(100).optional(),
+  address: z.string().optional(),
+  city: z.string().max(100).optional(),
+});
+
+export const adminUpdateEmployerSchema = z.object({
+  full_name: z.string().min(2).max(255).optional(),
+  business_name: z.string().min(2).max(255).optional(),
+  business_type: z.string().max(100).optional(),
+  address: z.string().optional(),
+  city: z.string().max(100).optional(),
+  is_active: z.boolean().optional(),
+});
+
+export const adminCreateWorkerSchema = z.object({
+  phone: z
+    .string()
+    .min(9)
+    .max(15)
+    .regex(/^\+?[0-9]+$/, "מספר טלפון לא תקין"),
+  full_name: z.string().min(2).max(255),
+  city: z.string().max(100).optional(),
+  experience_tags: z.array(z.string()).optional(),
+  bio: z.string().max(500).optional(),
+});
+
+export const adminUpdateWorkerSchema = z.object({
+  full_name: z.string().min(2).max(255).optional(),
+  city: z.string().max(100).optional(),
+  experience_tags: z.array(z.string()).optional(),
+  bio: z.string().max(500).optional(),
+  is_active: z.boolean().optional(),
+});
+
+export const adminCreateShiftSchema = createShiftSchema.and(
+  z.object({ employer_id: z.string().uuid("מעסיק נדרש") })
+);
+
+export const adminShiftFilterSchema = z.object({
+  status: z.string().optional(),
+  employer_id: z.string().uuid().optional(),
+  date: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const adminCreateOccupationSchema = z.object({
+  key: z
+    .string()
+    .min(2)
+    .max(50)
+    .regex(/^[a-z0-9-]+$/, "מפתח חייב להיות אנגלית קטנה, מספרים ומקפים בלבד"),
+  label_he: z.string().min(1).max(100),
+  sort_order: z.number().int().optional(),
+});
+
+export const adminUpdateOccupationSchema = z.object({
+  label_he: z.string().min(1).max(100).optional(),
+  sort_order: z.number().int().optional(),
+  is_active: z.boolean().optional(),
+});
+
+export const adminIncidentFilterSchema = z.object({
+  status: z.string().optional(),
+  incident_type: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const adminUpdateIncidentSchema = z.object({
+  status: z.enum(["OPEN", "IN_REVIEW", "RESOLVED", "DISMISSED"]),
+  resolution_notes: z.string().max(2000).optional(),
+});
+
 // Type exports
 export type SendOtpInput = z.infer<typeof sendOtpSchema>;
 export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;

@@ -41,6 +41,7 @@ export const employerProfiles = pgTable("employer_profiles", {
   business_name: varchar("business_name", { length: 255 }).notNull(),
   business_type: varchar("business_type", { length: 100 }),
   address: text("address"),
+  city: varchar("city", { length: 100 }),
   lat: decimal("lat", { precision: 10, scale: 7 }),
   lng: decimal("lng", { precision: 10, scale: 7 }),
   logo_url: text("logo_url"),

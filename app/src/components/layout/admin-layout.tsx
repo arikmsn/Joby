@@ -6,6 +6,10 @@ import {
   Users,
   ScrollText,
   LogOut,
+  LayoutGrid,
+  Building2,
+  CalendarDays,
+  Tags,
 } from "lucide-react";
 import { NavLink } from "./nav-link";
 import { useAuth } from "@/lib/auth-context";
@@ -29,17 +33,37 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
         <nav className="flex-1 p-3 space-y-1">
           <NavLink
+            href="/overview"
+            icon={<LayoutGrid className="h-5 w-5" />}
+            label={t("nav.overview")}
+          />
+          <NavLink
+            href="/employers"
+            icon={<Building2 className="h-5 w-5" />}
+            label={t("nav.employers")}
+          />
+          <NavLink
+            href="/workers"
+            icon={<Users className="h-5 w-5" />}
+            label={t("nav.workers")}
+          />
+          <NavLink
+            href="/admin-shifts"
+            icon={<CalendarDays className="h-5 w-5" />}
+            label={t("nav.shifts")}
+          />
+          <NavLink
+            href="/catalog"
+            icon={<Tags className="h-5 w-5" />}
+            label={t("nav.catalog")}
+          />
+          <NavLink
             href="/incidents"
             icon={<AlertTriangle className="h-5 w-5" />}
             label={t("nav.incidents")}
           />
           <NavLink
-            href="/users"
-            icon={<Users className="h-5 w-5" />}
-            label={t("nav.users")}
-          />
-          <NavLink
-            href="/log"
+            href="/action-log"
             icon={<ScrollText className="h-5 w-5" />}
             label={t("nav.log")}
           />
