@@ -115,14 +115,14 @@ function RegisterFormInner({ forcedRole }: { forcedRole?: AuthRole }) {
   if (!role) {
     return (
       <div className="space-y-8">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center mb-4">
-            <JobyLogo size={64} className="h-16 w-16" />
+        <div className="hero-glow rounded-3xl px-6 py-8 text-center text-white shadow-float">
+          <div className="inline-flex items-center justify-center rounded-2xl bg-white/10 p-3 ring-1 ring-white/15">
+            <JobyLogo size={64} className="h-16 w-16 rounded-xl" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">
+          <h1 className="mt-4 text-2xl font-extrabold tracking-tight">
             {t("auth.register")}
           </h1>
-          <p className="text-sm text-foreground-secondary mt-1">
+          <p className="mt-1.5 text-sm text-white/70">
             {t("auth.register_as")}
           </p>
         </div>

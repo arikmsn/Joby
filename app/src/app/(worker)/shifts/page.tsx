@@ -318,11 +318,11 @@ export default function WorkerShiftFeed() {
             </div>
           </div>
 
-          <div className="shrink-0 text-left">
-            <div className="text-xl font-extrabold text-primary font-numeric tabular-nums" dir="ltr">
+          <div className="shrink-0 text-right">
+            <div className="text-xl font-extrabold text-primary font-numeric tabular-nums text-right" dir="ltr">
               {t("general.currency")}{formatPay(shift.pay_rate)}
             </div>
-            <div className="text-[11px] text-foreground-tertiary text-right">
+            <div className="text-[11px] text-foreground-tertiary">
               {shift.pay_type === "hourly" ? t("shift.per_hour") : t("shift.total")}
             </div>
           </div>
@@ -386,17 +386,19 @@ export default function WorkerShiftFeed() {
   return (
     <div className="space-y-6">
       {/* Hero */}
-      <div className="hero-glow rounded-3xl p-5 text-white shadow-float -mx-1 animate-card-pop">
-        <div className="flex items-start justify-between gap-3">
-          <div>
+      <div className="hero-glow rounded-3xl p-6 text-white shadow-float -mx-1 animate-card-pop">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
             <p className="text-sm text-white/65">
               {t("feed.hero_greeting")}{firstName ? `, ${firstName}` : ""}
             </p>
-            <h1 className="text-2xl font-extrabold tracking-tight mt-0.5 text-balance">
+            <h1 className="text-2xl font-extrabold tracking-tight mt-1 text-balance">
               {t("feed.hero_subtitle")}
             </h1>
           </div>
-          <JobyLogo size={36} className="h-9 w-9 shrink-0 ring-2 ring-white/15" />
+          <div className="shrink-0 rounded-2xl bg-white/10 p-1.5 ring-1 ring-white/15">
+            <JobyLogo size={40} className="h-10 w-10 rounded-xl" />
+          </div>
         </div>
 
         {!loading && matchedShifts.length > 0 && (
@@ -411,14 +413,14 @@ export default function WorkerShiftFeed() {
         )}
 
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-white/10 p-3">
+          <div className="rounded-2xl bg-white/10 p-3.5">
             <p className="text-xs text-white/60">{t("feed.hero_earning_potential")}</p>
-            <p className="text-xl font-extrabold font-numeric tabular-nums mt-0.5" dir="ltr">
+            <p className="text-xl font-extrabold font-numeric tabular-nums mt-1 text-right" dir="ltr">
               {t("general.currency")}{formatPay(earningPotential)}
             </p>
           </div>
-          <div className="rounded-2xl bg-white/10 p-3">
-            <p className="text-xs text-white/60 mb-1">{t("feed.hero_rating")}</p>
+          <div className="rounded-2xl bg-white/10 p-3.5">
+            <p className="text-xs text-white/60 mb-1.5">{t("feed.hero_rating")}</p>
             <TrustBadge
               score={workerProfile?.trust_score ?? null}
               totalShifts={workerProfile?.total_shifts ?? 0}

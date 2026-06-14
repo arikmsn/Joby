@@ -63,10 +63,10 @@ export function WorkerLayout({ children }: { children: ReactNode }) {
       {showOnboarding && (
         <WorkerOnboarding initialStep={onboardingInitialStep} onClose={() => setShowOnboarding(false)} />
       )}
-      <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border-light px-4 py-2.5">
-        <div className="flex items-center gap-2 max-w-lg mx-auto">
-          <JobyLogo size={32} className="h-8 w-8" />
-          <span className="text-base font-bold text-foreground tracking-tight">
+      <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border-light px-4 py-3">
+        <div className="flex items-center gap-2.5 max-w-lg mx-auto">
+          <JobyLogo size={44} className="h-11 w-11 rounded-xl shadow-card" />
+          <span className="text-xl font-extrabold text-foreground tracking-tight">
             {t("app.name")}
           </span>
         </div>
@@ -78,8 +78,8 @@ export function WorkerLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <nav className="fixed bottom-0 inset-x-0 z-30 border-t border-border-light bg-surface/95 backdrop-blur-sm shadow-[0_-4px_16px_-4px_rgb(15_23_42_/_0.08)] safe-area-bottom">
-        <div className="mx-auto max-w-lg flex items-stretch px-1">
+      <nav className="fixed bottom-0 inset-x-0 z-30 border-t border-border bg-surface shadow-[0_-6px_20px_-6px_rgb(15_23_42_/_0.12)] safe-area-bottom">
+        <div className="mx-auto max-w-lg flex items-stretch px-2 py-1">
           <BottomNavLink
             href="/shifts"
             icon={<Briefcase className="h-5 w-5" />}

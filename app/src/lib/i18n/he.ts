@@ -191,7 +191,7 @@ const he = {
   "feed.hero_opportunities_one": "הזדמנות חדשה מתאימה לך",
   "feed.hero_opportunities_many": "הזדמנויות חדשות מתאימות לך",
   "feed.hero_earning_potential": "פוטנציאל הכנסה השבוע",
-  "feed.hero_rating": "אמינות",
+  "feed.hero_rating": "ציון כללי",
   "feed.hero_shifts_done": "משמרות שהושלמו",
   "feed.badge_recommended": "מומלץ עבורך",
   "feed.badge_urgent": "מבוקש",
