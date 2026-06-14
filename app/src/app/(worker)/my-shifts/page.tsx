@@ -7,11 +7,12 @@ import { Config } from "@/lib/constants";
 import { t } from "@/lib/i18n/he";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { EmployerAvatar } from "@/components/ui/employer-avatar";
 import { CelebrationToast } from "@/components/ui/celebration-toast";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ShiftListSkeleton } from "@/components/ui/skeleton";
-import { Calendar } from "lucide-react";
+import { Calendar, QrCode } from "lucide-react";
 import Link from "next/link";
 import {
   MapPin,
@@ -21,7 +22,6 @@ import {
   ChevronDown,
   Navigation,
   Phone,
-  CheckCircle2,
 } from "lucide-react";
 
 interface MyApplication {
@@ -113,6 +113,16 @@ function statusBadge(status: string, isBackup: boolean) {
   return <Badge variant={m.variant}>{m.label}</Badge>;
 }
 
+function canScanQr(app: MyApplication): boolean {
+  if (app.is_backup) return false;
+  if (app.status === "CHECKED_IN") return true;
+  if (app.status !== "APPROVED" && app.status !== "CONFIRMED") return false;
+  const now = new Date();
+  const start = new Date(app.shift_start_at);
+  const windowStart = new Date(start.getTime() - Config.CHECKIN_WINDOW_BEFORE_MINUTES * 60000);
+  return now >= windowStart;
+}
+
 export default function MyShiftsPage() {
   const { token } = useAuth();
   const { occupationLabel } = useOccupations();
@@ -133,7 +143,6 @@ export default function MyShiftsPage() {
         const list: MyApplication[] = d.applications || [];
         setApps(list);
 
-        // Celebrate newly-approved (non-backup) shifts the worker hasn't seen yet
         let seen: string[] = [];
         try {
           seen = JSON.parse(localStorage.getItem(SEEN_APPROVALS_KEY) || "[]");
@@ -154,9 +163,7 @@ export default function MyShiftsPage() {
           .map((a) => a.id);
         try {
           localStorage.setItem(SEEN_APPROVALS_KEY, JSON.stringify(approvedIds));
-        } catch {
-          /* ignore */
-        }
+        } catch { /* ignore */ }
       })
       .catch(() => setApps([]))
       .finally(() => setLoading(false));
@@ -183,9 +190,7 @@ export default function MyShiftsPage() {
           )
         );
       }
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
     setActionId(null);
   }
 
@@ -207,13 +212,22 @@ export default function MyShiftsPage() {
     return n % 1 === 0 ? n.toString() : n.toFixed(2);
   }
 
-  function fmt(iso: string) {
-    return new Date(iso).toLocaleString("he-IL", {
-      day: "numeric",
-      month: "short",
+  function fmtTimeOnly(iso: string) {
+    return new Date(iso).toLocaleTimeString("he-IL", {
       hour: "2-digit",
       minute: "2-digit",
     });
+  }
+
+  function fmtDate(iso: string) {
+    const d = new Date(iso);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const diff = (target.getTime() - today.getTime()) / 86400000;
+    if (diff === 0) return t("shift.day_today");
+    if (diff === 1) return t("shift.day_tomorrow");
+    return d.toLocaleDateString("he-IL", { weekday: "short", day: "numeric", month: "short" });
   }
 
   function mapsUrl(app: MyApplication) {
@@ -260,7 +274,6 @@ export default function MyShiftsPage() {
         </p>
       </div>
 
-      {/* Tabs */}
       <SegmentedControl
         layoutId="my-shifts-tab-pill"
         options={tabs.map((tb) => ({
@@ -272,11 +285,10 @@ export default function MyShiftsPage() {
         onChange={setTab}
       />
 
-      {/* Content */}
       {loading ? (
         <ShiftListSkeleton rows={3} />
       ) : filtered.length === 0 ? (
-        <div className="animate-fade-in flex flex-col items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-16 text-center">
+        <Card className="animate-fade-in flex flex-col items-center gap-3 px-4 py-16 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background">
             <Calendar className="h-6 w-6 text-foreground-tertiary" />
           </div>
@@ -289,12 +301,10 @@ export default function MyShiftsPage() {
               {t("feed.title")}
             </Link>
           )}
-        </div>
+        </Card>
       ) : (
         <div className="space-y-3">
           {filtered.map((app, i) => {
-            const isConfirmedForWorker =
-              tab === "approved" && !app.is_backup && app.status !== "CHECKED_IN";
             const hasArrivalInfo =
               app.shift_location_name ||
               app.shift_address ||
@@ -302,6 +312,7 @@ export default function MyShiftsPage() {
               app.shift_contact_name ||
               app.shift_contact_phone;
             const expanded = expandedId === app.id;
+            const showQr = tab === "approved" && canScanQr(app);
 
             const accentColor =
               tab === "approved"
@@ -313,12 +324,12 @@ export default function MyShiftsPage() {
                     : "bg-foreground-tertiary";
 
             return (
-              <div
+              <Card
                 key={app.id}
-                className={`animate-card-pop relative overflow-hidden rounded-2xl border transition-all ${
-                  isConfirmedForWorker
+                className={`animate-card-pop relative overflow-hidden ${
+                  showQr
                     ? "approved-glow border-primary/30 shadow-card"
-                    : "border-border bg-surface shadow-card"
+                    : ""
                 }`}
                 style={{ animationDelay: `${Math.min(i, 6) * 40}ms` }}
               >
@@ -336,13 +347,24 @@ export default function MyShiftsPage() {
                             {app.business_name} · {occupationLabel(app.shift_role_tag)}
                           </p>
                         </Link>
-                        {statusBadge(app.status, app.is_backup)}
+                        {/* Show QR action or status badge */}
+                        {showQr ? (
+                          <Link
+                            href={`/scan?shiftId=${app.shift_id}`}
+                            className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-primary-hover active:scale-[0.96]"
+                          >
+                            <QrCode className="h-3.5 w-3.5" />
+                            {t("my_shifts.qr_action")}
+                          </Link>
+                        ) : (
+                          statusBadge(app.status, app.is_backup)
+                        )}
                       </div>
 
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground-secondary mt-2">
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 font-medium text-foreground">
                           <Clock className="h-3.5 w-3.5 text-foreground-tertiary" />
-                          {fmt(app.shift_start_at)}
+                          {fmtDate(app.shift_start_at)} · {fmtTimeOnly(app.shift_start_at)}–{fmtTimeOnly(app.shift_end_at)}
                         </span>
                         {app.shift_city && (
                           <span className="flex items-center gap-1">
@@ -351,7 +373,7 @@ export default function MyShiftsPage() {
                           </span>
                         )}
                         <span className="flex items-center gap-1 font-bold text-foreground font-numeric tabular-nums">
-                          <Banknote className="h-3.5 w-3.5 text-primary" />
+                          <Banknote className="h-3.5 w-3.5 text-foreground-tertiary" />
                           {t("general.currency")}
                           {formatPay(app.shift_pay_rate)}{" "}
                           <span className="font-normal text-foreground-secondary">
@@ -363,19 +385,9 @@ export default function MyShiftsPage() {
                       </div>
                     </div>
                   </div>
-
-                  {isConfirmedForWorker && (
-                    <div className="flex items-center gap-1.5 mt-3 text-xs font-semibold text-primary">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      {t("my_shifts.confirmed_badge")}
-                      <span className="text-foreground-tertiary font-normal">
-                        · {t("my_shifts.next_step_hint")}
-                      </span>
-                    </div>
-                  )}
                 </div>
 
-                {/* Arrival details (approved/confirmed/checked-in, non-backup) */}
+                {/* Arrival details */}
                 {tab === "approved" && !app.is_backup && hasArrivalInfo && (
                   <div className="border-t border-border-light">
                     <button
@@ -491,7 +503,7 @@ export default function MyShiftsPage() {
                     </Link>
                   </div>
                 )}
-              </div>
+              </Card>
             );
           })}
         </div>

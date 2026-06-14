@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { OccupationPicker, type OccupationOption } from "@/components/ui/occupation-picker";
-import { User, MapPin, LogOut, Shield, Pencil, Car, Globe2, Banknote, Cake, Wallet, CheckCircle2, AlertCircle } from "lucide-react";
+import { User, MapPin, LogOut, Shield, Pencil, Car, Globe2, Banknote, Cake, Wallet, CheckCircle2, AlertCircle, Info, X } from "lucide-react";
 import type { WorkerProfile } from "@/lib/types";
 import { ISRAEL_CITIES, WORKER_LANGUAGES, LICENSE_TYPES, VEHICLE_TYPES } from "@/lib/constants";
 
@@ -21,6 +21,7 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [tags, setTags] = useState<string[]>(workerProfile?.experience_tags || []);
   const [saving, setSaving] = useState(false);
+  const [showScoreInfo, setShowScoreInfo] = useState(false);
 
   const cityOptions: OccupationOption[] = ISRAEL_CITIES.map((c) => ({ key: c, label_he: c }));
   const languageOptions: OccupationOption[] = WORKER_LANGUAGES.map((l) => ({ key: l.key, label_he: l.label_he }));
@@ -201,39 +202,29 @@ export default function ProfilePage() {
     <div className="space-y-4 animate-fade-in">
       <h1 className="text-xl font-extrabold text-foreground tracking-tight">{t("nav.profile")}</h1>
 
-      <Card>
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-            <User className="h-7 w-7 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold text-foreground truncate">
-              {user.full_name}
-            </h2>
-            <p className="text-sm text-foreground-secondary text-right" dir="ltr">
-              {user.phone}
-            </p>
+      {/* Identity card */}
+      <Card className="overflow-hidden">
+        <div className="hero-glow px-5 pt-6 pb-5">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-white/15 flex items-center justify-center shrink-0 ring-1 ring-white/20">
+              <User className="h-7 w-7 text-white/90" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-bold text-white truncate">
+                {user.full_name}
+              </h2>
+              <p className="text-sm text-white/60 text-right" dir="ltr">
+                {user.phone}
+              </p>
+            </div>
           </div>
         </div>
 
         {workerProfile && (
-          <div className="space-y-3 pt-4 border-t border-border-light">
-            {workerProfile.city && (
-              <div className="flex items-center gap-2 text-sm text-foreground-secondary">
-                <MapPin className="h-4 w-4 text-foreground-tertiary shrink-0" />
-                {workerProfile.city}
-              </div>
-            )}
-            <div className="flex items-center gap-2 text-sm">
-              <Shield className="h-4 w-4 text-foreground-tertiary shrink-0" />
-              <span className="text-foreground-secondary">{t("trust.score_label")}:</span>
-              <TrustBadge
-                score={workerProfile.trust_score}
-                totalShifts={workerProfile.total_shifts}
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-2.5 mt-3">
-              <div className="text-center p-3 bg-background rounded-xl border border-border-light transition-colors duration-150">
+          <div className="p-5 space-y-4">
+            {/* Stats grid */}
+            <div className="grid grid-cols-3 gap-2.5">
+              <div className="text-center p-3 bg-background rounded-xl">
                 <div className="text-lg font-bold text-foreground tabular-nums">
                   {workerProfile.total_shifts || 0}
                 </div>
@@ -241,7 +232,7 @@ export default function ProfilePage() {
                   {t("profile.total_shifts")}
                 </div>
               </div>
-              <div className="text-center p-3 bg-background rounded-xl border border-border-light transition-colors duration-150">
+              <div className="text-center p-3 bg-background rounded-xl">
                 <div className="text-lg font-bold text-foreground tabular-nums">
                   {workerProfile.no_show_count || 0}
                 </div>
@@ -249,7 +240,7 @@ export default function ProfilePage() {
                   {t("profile.no_show_count")}
                 </div>
               </div>
-              <div className="text-center p-3 bg-background rounded-xl border border-border-light transition-colors duration-150">
+              <div className="text-center p-3 bg-background rounded-xl">
                 <div className="text-lg font-bold text-foreground tabular-nums">
                   {workerProfile.cancel_count || 0}
                 </div>
@@ -259,89 +250,137 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="pt-3">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-foreground">
-                  {t("profile.experience")}
-                </h3>
-                {!editing && (
-                  <button
-                    onClick={() => setEditing(true)}
-                    className="rounded-full p-1 text-foreground-tertiary transition-all duration-150 hover:bg-background hover:text-primary active:scale-90"
-                    aria-label={t("general.edit")}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                )}
+            {/* Trust score with explanation */}
+            <div className="rounded-xl bg-background p-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-foreground-tertiary shrink-0" />
+                  <span className="text-sm font-medium text-foreground">{t("trust.score_label")}</span>
+                  <TrustBadge
+                    score={workerProfile.trust_score}
+                    totalShifts={workerProfile.total_shifts}
+                  />
+                </div>
+                <button
+                  onClick={() => setShowScoreInfo(!showScoreInfo)}
+                  className="rounded-full p-1 text-foreground-tertiary hover:text-primary hover:bg-primary/10 transition-colors"
+                  aria-label={t("trust.explanation_title")}
+                >
+                  {showScoreInfo ? <X className="h-4 w-4" /> : <Info className="h-4 w-4" />}
+                </button>
               </div>
-
-              <AnimatePresence mode="wait" initial={false}>
-                {editing ? (
+              <AnimatePresence>
+                {showScoreInfo && (
                   <motion.div
-                    key="edit"
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    transition={{ duration: 0.18 }}
-                    className="space-y-3"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
                   >
-                    <OccupationPicker
-                      options={occupations}
-                      value={tags}
-                      onChange={setTags}
-                    />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={handleSave} loading={saving}>
-                        {t("general.save")}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setTags(workerProfile.experience_tags || []);
-                          setEditing(false);
-                        }}
-                      >
-                        {t("general.cancel")}
-                      </Button>
+                    <div className="mt-3 pt-3 border-t border-border-light space-y-2">
+                      <p className="text-sm text-foreground-secondary">{t("trust.explanation_body")}</p>
+                      <p className="text-sm text-primary font-medium">{t("trust.how_to_improve")}</p>
                     </div>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="view"
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    transition={{ duration: 0.18 }}
-                    className="flex flex-wrap gap-2"
-                  >
-                    {(workerProfile.experience_tags || []).length === 0 ? (
-                      <p className="text-sm text-foreground-secondary">
-                        {t("profile.no_occupations")}
-                      </p>
-                    ) : (
-                      (workerProfile.experience_tags || []).map((tag) => (
-                        <Badge key={tag} variant="secondary">
-                          {labelMap.get(tag) || tag}
-                        </Badge>
-                      ))
-                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
+
+            {workerProfile.city && (
+              <div className="flex items-center gap-2 text-sm text-foreground-secondary">
+                <MapPin className="h-4 w-4 text-foreground-tertiary shrink-0" />
+                {workerProfile.city}
+              </div>
+            )}
           </div>
         )}
       </Card>
 
+      {/* Experience section */}
+      {workerProfile && (
+        <Card className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-foreground">
+              {t("profile.experience")}
+            </h3>
+            {!editing && (
+              <button
+                onClick={() => setEditing(true)}
+                className="rounded-full p-1.5 text-foreground-tertiary transition-all duration-150 hover:bg-background hover:text-primary active:scale-90"
+                aria-label={t("general.edit")}
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          <AnimatePresence mode="wait" initial={false}>
+            {editing ? (
+              <motion.div
+                key="edit"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.18 }}
+                className="space-y-3"
+              >
+                <OccupationPicker
+                  options={occupations}
+                  value={tags}
+                  onChange={setTags}
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleSave} loading={saving}>
+                    {t("general.save")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setTags(workerProfile.experience_tags || []);
+                      setEditing(false);
+                    }}
+                  >
+                    {t("general.cancel")}
+                  </Button>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="view"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.18 }}
+                className="flex flex-wrap gap-2"
+              >
+                {(workerProfile.experience_tags || []).length === 0 ? (
+                  <p className="text-sm text-foreground-secondary">
+                    {t("profile.no_occupations")}
+                  </p>
+                ) : (
+                  (workerProfile.experience_tags || []).map((tag) => (
+                    <Badge key={tag} variant="secondary">
+                      {labelMap.get(tag) || tag}
+                    </Badge>
+                  ))
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Card>
+      )}
+
+      {/* Preferences section */}
       {workerProfile && (
         <Card className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">{t("profile.preferences_title")}</h2>
+            <h2 className="text-sm font-bold text-foreground">{t("profile.preferences_title")}</h2>
             {!editingDetails && (
               <button
                 onClick={() => setEditingDetails(true)}
-                className="rounded-full p-1 text-foreground-tertiary transition-all duration-150 hover:bg-background hover:text-primary active:scale-90"
+                className="rounded-full p-1.5 text-foreground-tertiary transition-all duration-150 hover:bg-background hover:text-primary active:scale-90"
                 aria-label={t("general.edit")}
               >
                 <Pencil className="h-4 w-4" />
@@ -490,7 +529,7 @@ export default function ProfilePage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.18 }}
-              className="space-y-3 text-sm"
+              className="space-y-2.5 text-sm"
             >
               <div className="flex items-center gap-2 text-foreground-secondary">
                 <MapPin className="h-4 w-4 text-foreground-tertiary shrink-0" />
@@ -515,49 +554,42 @@ export default function ProfilePage() {
               <div className="flex items-center gap-2 text-foreground-secondary">
                 <Car className="h-4 w-4 text-foreground-tertiary shrink-0" />
                 <span>{hasVehicle ? t("profile.has_vehicle") : t("profile.no_vehicle")}</span>
-              </div>
-              <div className="flex items-center gap-2 text-foreground-secondary">
-                <Car className="h-4 w-4 text-foreground-tertiary shrink-0" />
-                <span>
-                  {t("profile.vehicle_types")}:{" "}
-                  {vehicleTypes.length > 0
-                    ? vehicleTypes.map((v) => vehicleTypeLabelMap.get(v) || v).join(", ")
-                    : t("profile.no_vehicle_types")}
-                </span>
+                {vehicleTypes.length > 0 && (
+                  <span className="text-foreground-tertiary">
+                    ({vehicleTypes.map((v) => vehicleTypeLabelMap.get(v) || v).join(", ")})
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2 text-foreground-secondary">
                 <Car className="h-4 w-4 text-foreground-tertiary shrink-0" />
                 <span>
                   {t("profile.has_license_q")} {hasLicense ? t("general.yes") : t("general.no")}
-                  {hasLicense &&
-                    ` — ${
-                      licenseTypes.length > 0
-                        ? licenseTypes.map((l) => licenseTypeLabelMap.get(l) || l).join(", ")
-                        : t("profile.no_license_types")
-                    }`}
+                  {hasLicense && licenseTypes.length > 0 &&
+                    ` — ${licenseTypes.map((l) => licenseTypeLabelMap.get(l) || l).join(", ")}`}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-foreground-secondary">
                 <Cake className="h-4 w-4 text-foreground-tertiary shrink-0" />
                 <span>{birthYear || t("profile.not_set")}</span>
               </div>
-              {bio && <p className="text-foreground-secondary pt-1 border-t border-border-light">{bio}</p>}
+              {bio && <p className="text-foreground-secondary pt-2 border-t border-border-light">{bio}</p>}
             </motion.div>
           )}
           </AnimatePresence>
         </Card>
       )}
 
+      {/* Payout section */}
       <Card className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Wallet className="h-5 w-5 text-foreground-tertiary" />
-            <h2 className="text-lg font-semibold text-foreground">{t("payout.title")}</h2>
+            <h2 className="text-sm font-bold text-foreground">{t("payout.title")}</h2>
           </div>
           {!editingPayout && (
             <button
               onClick={() => setEditingPayout(true)}
-              className="rounded-full p-1 text-foreground-tertiary transition-all duration-150 hover:bg-background hover:text-primary active:scale-90"
+              className="rounded-full p-1.5 text-foreground-tertiary transition-all duration-150 hover:bg-background hover:text-primary active:scale-90"
               aria-label={t("general.edit")}
             >
               <Pencil className="h-4 w-4" />

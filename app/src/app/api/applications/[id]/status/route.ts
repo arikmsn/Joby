@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { applications, shifts, notifications, employerProfiles } from "@/lib/schema";
+import { applications, shifts, notifications, employerProfiles, users } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { UserRole } from "@/lib/constants";
 import { approveApplicationSchema } from "@/lib/validators";
 import { incrementSlot } from "@/lib/slots";
 import { t } from "@/lib/i18n/he";
 import { sql } from "drizzle-orm";
+import { sendSMS } from "@/lib/sms";
 
 export async function PATCH(
   req: NextRequest,
@@ -132,6 +133,20 @@ export async function PATCH(
       payload: { shift_id: app.shift_id, application_id: appId },
       channel: "in_app",
     });
+
+    // Send WhatsApp notification to the worker (fire-and-forget)
+    const workerRows = await db
+      .select({ phone: users.phone })
+      .from(users)
+      .where(eq(users.id, app.worker_id))
+      .limit(1);
+    if (workerRows[0]?.phone) {
+      const waMessage = t("notification.approval.whatsapp")
+        .replace("{title}", shift.title)
+        .replace("{employer}", employerName)
+        .replace("{date}", shiftDate);
+      sendSMS(workerRows[0].phone, waMessage).catch(() => {});
+    }
 
     return NextResponse.json({ application: updated[0] });
   }

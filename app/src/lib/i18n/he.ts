@@ -666,6 +666,19 @@ const he = {
 
   // --- Worker invite (WhatsApp) ---
   "notification.worker_invite.whatsapp": "בעל העסק \"{employer}\" מזמין אותך להשתמש במערכת Joby כדי לנהל את המשמרות שלך. הירשם עכשיו וסגור משמרת עוד היום: https://joby-opal.vercel.app/login",
+
+  // --- Worker UX Corrections Sprint ---
+  "feed.hero_earnings_week": "הכנסה השבוע",
+  "feed.hero_greeting_with_count": "מצאנו {count} הזדמנויות חדשות עבורך",
+  "feed.hero_greeting_none": "חיפשנו בשבילך — עוד לא מצאנו התאמות חדשות",
+  "feed.dismiss_shift": "הסתר",
+  "feed.dismissed_notice": "ההזדמנות הוסתרה מהרשימה",
+  "feed.edit_preferences": "עריכת העדפות",
+  "trust.explanation_title": "מה זה ציון אמינות?",
+  "trust.explanation_body": "ציון האמינות מחושב לפי: הגעה למשמרות, ביטולים, אי-הגעות והתנהלות כללית. ככל שתהיו עקביים ואמינים יותר, הציון יעלה ותקבלו עדיפות בהתאמת משמרות.",
+  "trust.how_to_improve": "איך לשפר? הגיעו בזמן, אל תבטלו ברגע האחרון, וצברו עוד משמרות שהושלמו בהצלחה.",
+  "my_shifts.qr_action": "סריקת QR",
+  "notification.approval.whatsapp": "אושרת למשמרת \"{title}\" אצל {employer} ב-{date}! היכנס/י לאפליקציה לפרטים: https://joby-opal.vercel.app/my-shifts",
 } as const;
 
 export type TranslationKey = keyof typeof he;

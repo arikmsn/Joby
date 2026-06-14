@@ -32,7 +32,6 @@ export function LoginForm({ role }: { role?: AuthRole }) {
   const [devOtp, setDevOtp] = useState("");
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
 
-  // Already-logged-in users visiting an auth page go straight to their system.
   useEffect(() => {
     if (!isLoading && user) {
       router.replace(roleHomePath(user.role));
@@ -126,23 +125,21 @@ export function LoginForm({ role }: { role?: AuthRole }) {
     );
   }
 
-  // Phone has access to more than one interface — let the user pick.
   if (step === "choose") {
     return (
-      <div className="space-y-8">
-        <div className="hero-glow rounded-3xl px-6 py-8 text-center text-white shadow-float">
+      <div className="overflow-hidden rounded-3xl shadow-float">
+        <div className="hero-glow px-6 pt-10 pb-8 text-center text-white">
           <div className="inline-flex items-center justify-center rounded-2xl bg-white/10 p-3 ring-1 ring-white/15">
             <JobyLogo size={64} className="h-16 w-16 rounded-xl" />
           </div>
           <h1 className="mt-4 text-2xl font-extrabold tracking-tight">{t("auth.choose_role_title")}</h1>
         </div>
-
-        <div className="space-y-3">
+        <div className="bg-surface px-6 py-6 space-y-3">
           {accounts.map((account) => (
             <button
               key={account.user.id}
               onClick={() => handleChooseAccount(account)}
-              className="w-full flex items-center gap-4 p-4 bg-surface rounded-xl border border-border hover:border-primary hover:shadow-card-hover transition-all text-right"
+              className="w-full flex items-center gap-4 p-4 bg-background rounded-xl border border-border hover:border-primary hover:shadow-card-hover transition-all text-right"
             >
               <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                 <Building2 className="h-6 w-6 text-primary" />
@@ -157,11 +154,10 @@ export function LoginForm({ role }: { role?: AuthRole }) {
     );
   }
 
-  // Generic gateway: no role in the URL — let the user choose where to go.
   if (!role) {
     return (
-      <div className="space-y-8">
-        <div className="hero-glow rounded-3xl px-6 py-8 text-center text-white shadow-float">
+      <div className="overflow-hidden rounded-3xl shadow-float">
+        <div className="hero-glow px-6 pt-10 pb-8 text-center text-white">
           <div className="inline-flex items-center justify-center rounded-2xl bg-white/10 p-3 ring-1 ring-white/15">
             <JobyLogo size={64} className="h-16 w-16 rounded-xl" />
           </div>
@@ -169,12 +165,12 @@ export function LoginForm({ role }: { role?: AuthRole }) {
           <p className="mt-1.5 text-sm text-white/70">{t("auth.login")}</p>
         </div>
 
-        <div className="space-y-3">
+        <div className="bg-surface px-6 py-6 space-y-3">
           <Link
             href="/login/worker"
-            className="w-full flex items-center gap-4 p-4 bg-surface rounded-xl border border-border hover:border-primary hover:shadow-card-hover transition-all text-right"
+            className="w-full flex items-center gap-4 p-4 bg-background rounded-xl border border-border hover:border-primary hover:shadow-card-hover transition-all text-right"
           >
-            <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center">
+            <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
               <User className="h-6 w-6 text-primary" />
             </div>
             <div>
@@ -185,7 +181,7 @@ export function LoginForm({ role }: { role?: AuthRole }) {
 
           <Link
             href="/login/employer"
-            className="w-full flex items-center gap-4 p-4 bg-surface rounded-xl border border-border hover:border-primary hover:shadow-card-hover transition-all text-right"
+            className="w-full flex items-center gap-4 p-4 bg-background rounded-xl border border-border hover:border-primary hover:shadow-card-hover transition-all text-right"
           >
             <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
               <Building2 className="h-6 w-6 text-primary" />
@@ -197,12 +193,14 @@ export function LoginForm({ role }: { role?: AuthRole }) {
           </Link>
         </div>
 
-        <p className="text-center text-sm text-foreground-secondary">
-          {t("auth.not_registered")}{" "}
-          <Link href="/register" className="text-primary font-medium hover:underline">
-            {t("auth.register")}
-          </Link>
-        </p>
+        <div className="bg-surface px-6 pb-6 pt-2 border-t border-border-light">
+          <p className="text-center text-sm text-foreground-secondary">
+            {t("auth.not_registered")}{" "}
+            <Link href="/register" className="text-primary font-medium hover:underline">
+              {t("auth.register")}
+            </Link>
+          </p>
+        </div>
       </div>
     );
   }
@@ -211,9 +209,9 @@ export function LoginForm({ role }: { role?: AuthRole }) {
     role === "worker" ? t("auth.worker.login_tagline") : t("auth.employer.login_tagline");
 
   return (
-    <div className="space-y-8">
-      {/* Logo area */}
-      <div className="hero-glow rounded-3xl px-6 py-8 text-center text-white shadow-float">
+    <div className="overflow-hidden rounded-3xl shadow-float">
+      {/* Branded top — flows into the form */}
+      <div className="hero-glow px-6 pt-10 pb-8 text-center text-white">
         <div className="inline-flex items-center justify-center rounded-2xl bg-white/10 p-3 ring-1 ring-white/15">
           <JobyLogo size={64} className="h-16 w-16 rounded-xl" />
         </div>
@@ -221,8 +219,8 @@ export function LoginForm({ role }: { role?: AuthRole }) {
         <p className="mt-1.5 text-sm text-white/70">{tagline}</p>
       </div>
 
-      {/* Form */}
-      <div className="bg-surface rounded-xl border border-border p-6 shadow-card">
+      {/* Form — continuous surface, no separate card */}
+      <div className="bg-surface px-6 py-6">
         {step === "phone" ? (
           <div className="space-y-5">
             <Input
@@ -291,13 +289,15 @@ export function LoginForm({ role }: { role?: AuthRole }) {
         )}
       </div>
 
-      {/* Footer link */}
-      <p className="text-center text-sm text-foreground-secondary">
-        {t("auth.not_registered")}{" "}
-        <Link href={`/join/${role}`} className="text-primary font-medium hover:underline">
-          {t("auth.register")}
-        </Link>
-      </p>
+      {/* Footer link — part of the same card */}
+      <div className="bg-surface px-6 pb-6 pt-2 border-t border-border-light">
+        <p className="text-center text-sm text-foreground-secondary">
+          {t("auth.not_registered")}{" "}
+          <Link href={`/join/${role}`} className="text-primary font-medium hover:underline">
+            {t("auth.register")}
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

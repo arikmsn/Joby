@@ -7,7 +7,6 @@ import { t } from "@/lib/i18n/he";
 import { Badge } from "@/components/ui/badge";
 import { EmployerAvatar } from "@/components/ui/employer-avatar";
 import { TrustBadge } from "@/components/ui/trust-badge";
-import { JobyLogo } from "@/components/ui/joby-logo";
 import Link from "next/link";
 import type { WorkerProfile } from "@/lib/types";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
@@ -21,12 +20,30 @@ import {
   AlertTriangle,
   SlidersHorizontal,
   X,
-  CalendarClock,
   Zap,
   Sparkles,
   Wand2,
   Pencil,
+  EyeOff,
 } from "lucide-react";
+
+const DISMISSED_KEY = "joby_dismissed_shifts";
+
+function getDismissedIds(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(DISMISSED_KEY) || "[]"));
+  } catch {
+    return new Set();
+  }
+}
+
+function dismissShift(id: string) {
+  const ids = getDismissedIds();
+  ids.add(id);
+  try {
+    localStorage.setItem(DISMISSED_KEY, JSON.stringify(Array.from(ids)));
+  } catch { /* quota */ }
+}
 
 interface FeedShift {
   id: string;
@@ -62,6 +79,22 @@ function appliedBadge(app: { status: string; is_backup: boolean }) {
   return m ? <Badge variant={m.variant}>{m.label}</Badge> : null;
 }
 
+function dayKey(iso: string) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function dayLabel(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = (target.getTime() - today.getTime()) / 86400000;
+  if (diff === 0) return t("shift.day_today");
+  if (diff === 1) return t("shift.day_tomorrow");
+  return d.toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long" });
+}
+
 export default function WorkerShiftFeed() {
   const { token, user, profile } = useAuth();
   const workerProfile = profile as WorkerProfile | null;
@@ -76,6 +109,24 @@ export default function WorkerShiftFeed() {
   const [showFilters, setShowFilters] = useState(false);
   const [newCount, setNewCount] = useState(0);
   const [activeTab, setActiveTab] = useState<"matched" | "all">("matched");
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const [weeklyEarnings, setWeeklyEarnings] = useState<number | null>(null);
+
+  // Load dismissed IDs from localStorage
+  useEffect(() => {
+    setDismissedIds(getDismissedIds());
+  }, []);
+
+  // Fetch actual weekly earnings for the hero
+  useEffect(() => {
+    if (!token) return;
+    fetch("/api/workers/earnings?range=week", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((d) => setWeeklyEarnings(d.totals?.estimated_earnings ?? 0))
+      .catch(() => setWeeklyEarnings(0));
+  }, [token]);
 
   const fetchShifts = useCallback(async () => {
     if (!token) return;
@@ -103,7 +154,6 @@ export default function WorkerShiftFeed() {
     fetchShifts();
   }, [fetchShifts]);
 
-  // Periodically check for newly published shifts without disrupting the current view
   useEffect(() => {
     if (!token) return;
     const interval = setInterval(async () => {
@@ -124,22 +174,21 @@ export default function WorkerShiftFeed() {
           if (!currentIds.has(id)) added++;
         });
         setNewCount(added);
-      } catch {
-        /* ignore */
-      }
+      } catch { /* ignore */ }
     }, 60000);
     return () => clearInterval(interval);
   }, [token, roleFilters, cityFilter, dateFilter, shifts]);
 
-  // Shifts already approved/confirmed for this worker live only in "My Shifts"
+  // Filter out approved shifts and dismissed shifts
   const visibleShifts = useMemo(
     () =>
       shifts.filter(
         (s) =>
-          !s.my_application ||
-          !["APPROVED", "CONFIRMED", "CHECKED_IN"].includes(s.my_application.status)
+          !dismissedIds.has(s.id) &&
+          (!s.my_application ||
+            !["APPROVED", "CONFIRMED", "CHECKED_IN"].includes(s.my_application.status))
       ),
-    [shifts]
+    [shifts, dismissedIds]
   );
 
   const cities = useMemo(
@@ -179,18 +228,6 @@ export default function WorkerShiftFeed() {
 
   const displayedShifts = activeTab === "matched" ? matchedShifts : visibleShifts;
 
-  // Rough weekly earning potential, based on the best-matching upcoming opportunities
-  const earningPotential = useMemo(() => {
-    const pool = (hasPreferences ? matchedShifts : visibleShifts).slice(0, 5);
-    return pool.reduce((sum, s) => {
-      if (s.pay_type === "hourly") {
-        const hours = (new Date(s.end_at).getTime() - new Date(s.start_at).getTime()) / 3600000;
-        return sum + Number(s.pay_rate) * Math.max(hours, 0);
-      }
-      return sum + Number(s.pay_rate);
-    }, 0);
-  }, [hasPreferences, matchedShifts, visibleShifts]);
-
   const activeFilterCount = roleFilters.length + [cityFilter, dateFilter].filter(Boolean).length;
 
   const sortedOccupations = useMemo(
@@ -213,10 +250,8 @@ export default function WorkerShiftFeed() {
     setDateFilter("");
   }
 
-  function formatTime(iso: string) {
-    return new Date(iso).toLocaleString("he-IL", {
-      day: "numeric",
-      month: "short",
+  function formatTimeOnly(iso: string) {
+    return new Date(iso).toLocaleTimeString("he-IL", {
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -235,25 +270,43 @@ export default function WorkerShiftFeed() {
 
   function isStartingSoon(iso: string) {
     const ms = new Date(iso).getTime() - Date.now();
-    return ms > 0 && ms < 1000 * 60 * 60 * 6; // within 6 hours
+    return ms > 0 && ms < 1000 * 60 * 60 * 6;
   }
 
-  function isToday(iso: string) {
-    const d = new Date(iso);
-    const now = new Date();
-    return (
-      d.getFullYear() === now.getFullYear() &&
-      d.getMonth() === now.getMonth() &&
-      d.getDate() === now.getDate()
-    );
+  function handleDismiss(shiftId: string, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    dismissShift(shiftId);
+    setDismissedIds(getDismissedIds());
   }
 
-  // Group: urgent (SOS) first, then today, then upcoming
-  const urgent = displayedShifts.filter((s) => s.has_sos);
-  const today = displayedShifts.filter((s) => !s.has_sos && isToday(s.start_at));
-  const upcoming = displayedShifts.filter((s) => !s.has_sos && !isToday(s.start_at));
+  // Group shifts by day
+  const dayGroups = useMemo(() => {
+    const urgent = displayedShifts.filter((s) => s.has_sos);
+    const rest = displayedShifts.filter((s) => !s.has_sos);
 
-  const firstName = user?.full_name?.split(" ")[0];
+    const groups: { key: string; label: string; shifts: FeedShift[]; isUrgent?: boolean }[] = [];
+
+    if (urgent.length > 0) {
+      groups.push({ key: "__urgent", label: t("feed.section_urgent"), shifts: urgent, isUrgent: true });
+    }
+
+    const byDay = new Map<string, FeedShift[]>();
+    for (const s of rest) {
+      const key = dayKey(s.start_at);
+      const arr = byDay.get(key) || [];
+      arr.push(s);
+      byDay.set(key, arr);
+    }
+
+    const sortedDays = Array.from(byDay.keys()).sort();
+    for (const dk of sortedDays) {
+      const dayShifts = byDay.get(dk)!;
+      groups.push({ key: dk, label: dayLabel(dayShifts[0].start_at), shifts: dayShifts });
+    }
+
+    return groups;
+  }, [displayedShifts]);
 
   function ShiftRow({ shift }: { shift: FeedShift }) {
     const spotsLeft = shift.workers_needed - shift.slots_filled;
@@ -264,117 +317,113 @@ export default function WorkerShiftFeed() {
     const recommended = hasPreferences && matchCount >= 2;
 
     return (
-      <Link
-        href={`/shifts/${shift.id}`}
-        className="block rounded-2xl border border-border bg-surface p-4 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card-hover active:scale-[0.99] animate-card-pop"
-      >
-        {/* Badges */}
-        <div className="flex items-center gap-1.5 flex-wrap mb-2.5 empty:mb-0">
-          {shift.has_sos && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-danger px-2.5 py-0.5 text-xs font-bold text-white">
-              <AlertTriangle className="h-3 w-3" />
-              {t("sos.badge")}
-            </span>
-          )}
-          {!shift.has_sos && soon && (
-            <Badge variant="warning">
-              <Zap className="h-3 w-3" />
-              {t("feed.badge_immediate")}
-            </Badge>
-          )}
-          {recommended && (
-            <Badge className="bg-accent-light text-accent border border-accent/20">
-              <Sparkles className="h-3 w-3" />
-              {t("feed.badge_recommended")}
-            </Badge>
-          )}
-          {spotsLeft === 1 && (
-            <Badge variant="warning">{t("feed.badge_urgent")}</Badge>
-          )}
-          {shift.my_application && appliedBadge(shift.my_application)}
-        </div>
-
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 min-w-0">
-            <EmployerAvatar name={shift.business_name || shift.title} />
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-foreground-secondary truncate">
-                {shift.business_name}
-              </p>
-              <h3 className="font-bold text-foreground truncate leading-snug">{shift.title}</h3>
-              <Badge variant="secondary" className="mt-1">
-                {occupationLabel(shift.role_tag)}
+      <div className="relative group">
+        <Link
+          href={`/shifts/${shift.id}`}
+          className="block rounded-2xl border border-border bg-surface p-4 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card-hover active:scale-[0.99] animate-card-pop"
+        >
+          {/* Badges */}
+          <div className="flex items-center gap-1.5 flex-wrap mb-2.5 empty:mb-0">
+            {shift.has_sos && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-danger px-2.5 py-0.5 text-xs font-bold text-white">
+                <AlertTriangle className="h-3 w-3" />
+                {t("sos.badge")}
+              </span>
+            )}
+            {!shift.has_sos && soon && (
+              <Badge variant="warning">
+                <Zap className="h-3 w-3" />
+                {t("feed.badge_immediate")}
               </Badge>
-              <div className="flex items-center gap-3 text-xs text-foreground-tertiary mt-1.5">
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {formatTime(shift.start_at)} · {formatDuration(shift.start_at, shift.end_at)}
-                </span>
-                <span className="flex items-center gap-1 truncate">
-                  <MapPin className="h-3 w-3 shrink-0" />
-                  {shift.city || shift.location_name || shift.address}
-                </span>
+            )}
+            {recommended && (
+              <Badge className="bg-accent-light text-accent border border-accent/20">
+                <Sparkles className="h-3 w-3" />
+                {t("feed.badge_recommended")}
+              </Badge>
+            )}
+            {spotsLeft === 1 && (
+              <Badge variant="warning">{t("feed.badge_urgent")}</Badge>
+            )}
+            {shift.my_application && appliedBadge(shift.my_application)}
+          </div>
+
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0">
+              <EmployerAvatar name={shift.business_name || shift.title} />
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-foreground-secondary truncate">
+                  {shift.business_name}
+                  {shift.city && <> · {shift.city}</>}
+                </p>
+                <h3 className="font-bold text-foreground truncate leading-snug">{shift.title}</h3>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-foreground">
+                    <Clock className="h-3.5 w-3.5 text-foreground-tertiary" />
+                    {formatTimeOnly(shift.start_at)}–{formatTimeOnly(shift.end_at)}
+                  </span>
+                  <span className="text-xs text-foreground-tertiary">
+                    {formatDuration(shift.start_at, shift.end_at)}
+                  </span>
+                </div>
+                {(shift.location_name || shift.address) && (
+                  <div className="flex items-center gap-1 text-xs text-foreground-secondary mt-1">
+                    <MapPin className="h-3 w-3 shrink-0 text-foreground-tertiary" />
+                    <span className="truncate">{shift.location_name || shift.address}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="shrink-0 text-right">
+              <div className="text-xl font-extrabold text-secondary font-numeric tabular-nums text-right" dir="ltr">
+                {t("general.currency")}{formatPay(shift.pay_rate)}
+              </div>
+              <div className="text-[11px] text-foreground-tertiary">
+                {shift.pay_type === "hourly" ? t("shift.per_hour") : t("shift.total")}
               </div>
             </div>
           </div>
 
-          <div className="shrink-0 text-right">
-            <div className="text-xl font-extrabold text-primary font-numeric tabular-nums text-right" dir="ltr">
-              {t("general.currency")}{formatPay(shift.pay_rate)}
+          {/* Match score */}
+          {matchScore > 0 && (
+            <div className="mt-3 flex items-center gap-2">
+              <div className="flex-1 h-1.5 rounded-full bg-border-light overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-secondary"
+                  style={{ width: `${matchScore}%` }}
+                />
+              </div>
+              <span className="text-xs font-semibold text-secondary shrink-0">
+                {matchScore}% {t("feed.match_score")}
+              </span>
             </div>
-            <div className="text-[11px] text-foreground-tertiary">
-              {shift.pay_type === "hourly" ? t("shift.per_hour") : t("shift.total")}
-            </div>
-          </div>
-        </div>
+          )}
 
-        {/* Match score */}
-        {matchScore > 0 && (
-          <div className="mt-3 flex items-center gap-2">
-            <div className="flex-1 h-1.5 rounded-full bg-border-light overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-l from-primary to-primary-400"
-                style={{ width: `${matchScore}%` }}
-              />
+          {/* Spots left */}
+          {spotsLeft >= 0 && spotsLeft !== 1 && (
+            <div className="mt-2.5 flex items-center gap-1.5 text-xs font-medium text-foreground-tertiary">
+              <span className={`h-1.5 w-1.5 rounded-full ${spotsLeft === 0 ? "bg-foreground-tertiary" : "bg-success"}`} />
+              {spotsLeft === 0 ? t("feed.full") : `${spotsLeft} ${t("feed.spots_left")}`}
             </div>
-            <span className="text-xs font-semibold text-primary shrink-0">
-              {matchScore}% {t("feed.match_score")}
-            </span>
+          )}
+
+          {/* CTA */}
+          <div className="mt-3 rounded-xl bg-secondary/8 text-secondary text-sm font-bold text-center py-2.5 transition-colors">
+            {t("feed.cta_view_opportunity")}
           </div>
+        </Link>
+
+        {/* Dismiss button */}
+        {!shift.my_application && (
+          <button
+            onClick={(e) => handleDismiss(shift.id, e)}
+            className="absolute top-3 start-3 opacity-0 group-hover:opacity-100 focus:opacity-100 rounded-full p-1.5 bg-surface/90 border border-border text-foreground-tertiary hover:text-foreground hover:bg-surface transition-all duration-150 shadow-sm"
+            title={t("feed.dismiss_shift")}
+          >
+            <EyeOff className="h-3.5 w-3.5" />
+          </button>
         )}
-
-        {/* Spots left */}
-        {spotsLeft >= 0 && spotsLeft !== 1 && (
-          <div className="mt-2.5 flex items-center gap-1.5 text-xs font-medium text-foreground-tertiary">
-            <span className={`h-1.5 w-1.5 rounded-full ${spotsLeft === 0 ? "bg-foreground-tertiary" : "bg-success"}`} />
-            {spotsLeft === 0 ? t("feed.full") : `${spotsLeft} ${t("feed.spots_left")}`}
-          </div>
-        )}
-
-        {/* CTA */}
-        <div className="mt-3 rounded-xl bg-primary/8 text-primary text-sm font-bold text-center py-2.5 transition-colors group-hover:bg-primary/15">
-          {t("feed.cta_view_opportunity")}
-        </div>
-      </Link>
-    );
-  }
-
-  function SectionHeader({ icon, label, count }: { icon: React.ReactNode; label: string; count: number }) {
-    return (
-      <div className="flex items-center gap-2 px-1 mb-2">
-        {icon}
-        <h2 className="text-sm font-bold text-foreground">{label}</h2>
-        <span className="text-xs text-foreground-tertiary">{count}</span>
-      </div>
-    );
-  }
-
-  function Section({ shifts: list }: { shifts: FeedShift[] }) {
-    return (
-      <div className="space-y-3">
-        {list.map((s) => (
-          <ShiftRow key={s.id} shift={s} />
-        ))}
       </div>
     );
   }
@@ -383,40 +432,40 @@ export default function WorkerShiftFeed() {
   const noMatchedPreferences =
     activeTab === "matched" && hasPreferences && shifts.length > 0 && matchedShifts.length === 0;
 
+  const firstName = user?.full_name?.split(" ")[0];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Hero */}
       <div className="hero-glow rounded-3xl p-6 text-white shadow-float -mx-1 animate-card-pop">
         <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-sm text-white/65">
               {t("feed.hero_greeting")}{firstName ? `, ${firstName}` : ""}
             </p>
-            <h1 className="text-2xl font-extrabold tracking-tight mt-1 text-balance">
-              {t("feed.hero_subtitle")}
-            </h1>
-          </div>
-          <div className="shrink-0 rounded-2xl bg-white/10 p-1.5 ring-1 ring-white/15">
-            <JobyLogo size={40} className="h-10 w-10 rounded-xl" />
-          </div>
-        </div>
-
-        {!loading && matchedShifts.length > 0 && (
-          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold">
-            <Sparkles className="h-4 w-4 text-primary" />
-            {matchedShifts.length}{" "}
-            {matchedShifts.length === 1 ? t("feed.hero_opportunities_one") : t("feed.hero_opportunities_many")}
-            {urgent.length > 0 && (
-              <span className="text-warning"> · {urgent.length} {t("feed.section_urgent")}</span>
+            {!loading && (
+              <h1 className="text-lg font-extrabold tracking-tight mt-1 text-balance">
+                {matchedShifts.length > 0
+                  ? t("feed.hero_greeting_with_count").replace("{count}", String(matchedShifts.length))
+                  : t("feed.hero_greeting_none")}
+              </h1>
             )}
           </div>
-        )}
+          {/* Edit preferences action (replaces logo) */}
+          <Link
+            href="/profile"
+            className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 hover:bg-white/20 transition-colors"
+            title={t("feed.edit_preferences")}
+          >
+            <Pencil className="h-5 w-5 text-white/80" />
+          </Link>
+        </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-white/10 p-3.5">
-            <p className="text-xs text-white/60">{t("feed.hero_earning_potential")}</p>
+            <p className="text-xs text-white/60">{t("feed.hero_earnings_week")}</p>
             <p className="text-xl font-extrabold font-numeric tabular-nums mt-1 text-right" dir="ltr">
-              {t("general.currency")}{formatPay(earningPotential)}
+              {t("general.currency")}{weeklyEarnings != null ? formatPay(weeklyEarnings) : "—"}
             </p>
           </div>
           <div className="rounded-2xl bg-white/10 p-3.5">
@@ -429,31 +478,6 @@ export default function WorkerShiftFeed() {
           </div>
         </div>
       </div>
-
-      {/* Contextual summary of saved preferences */}
-      {workerProfile?.onboarding_completed_at && hasPreferences && (
-        <div className="flex items-center gap-2 flex-wrap rounded-xl bg-background border border-border px-4 py-2.5 text-xs text-foreground-secondary">
-          {preferredRoles.length > 0 && (
-            <span>
-              {t("feed.summary_roles")}: <span className="font-semibold text-foreground">{preferredRoles.length}</span>
-            </span>
-          )}
-          {preferredCities.length > 0 && (
-            <span>
-              {t("feed.summary_cities")}: <span className="font-semibold text-foreground">{preferredCities.length}</span>
-            </span>
-          )}
-          {workerProfile.min_pay != null && (
-            <span>
-              {t("feed.summary_min_pay")}: <span className="font-semibold text-foreground">{t("general.currency")}{formatPay(workerProfile.min_pay)}</span>
-            </span>
-          )}
-          <Link href="/profile" className="flex items-center gap-1 text-primary font-medium mr-auto">
-            <Pencil className="h-3 w-3" />
-            {t("feed.summary_edit")}
-          </Link>
-        </div>
-      )}
 
       {/* Onboarding prompt for skipped/incomplete preferences */}
       {isOnboardingIncomplete(workerProfile) && (
@@ -667,36 +691,24 @@ export default function WorkerShiftFeed() {
         </div>
       ) : (
         <div className="space-y-5">
-          {urgent.length > 0 && (
-            <div>
-              <SectionHeader
-                icon={<AlertTriangle className="h-4 w-4 text-danger" />}
-                label={t("feed.section_urgent")}
-                count={urgent.length}
-              />
-              <Section shifts={urgent} />
+          {dayGroups.map((group) => (
+            <div key={group.key}>
+              <div className="flex items-center gap-2 px-1 mb-2">
+                {group.isUrgent ? (
+                  <AlertTriangle className="h-4 w-4 text-danger" />
+                ) : (
+                  <Clock className="h-4 w-4 text-foreground-tertiary" />
+                )}
+                <h2 className="text-sm font-bold text-foreground">{group.label}</h2>
+                <span className="text-xs text-foreground-tertiary">{group.shifts.length}</span>
+              </div>
+              <div className="space-y-3">
+                {group.shifts.map((s) => (
+                  <ShiftRow key={s.id} shift={s} />
+                ))}
+              </div>
             </div>
-          )}
-          {today.length > 0 && (
-            <div>
-              <SectionHeader
-                icon={<Zap className="h-4 w-4 text-warning" />}
-                label={t("feed.section_today")}
-                count={today.length}
-              />
-              <Section shifts={today} />
-            </div>
-          )}
-          {upcoming.length > 0 && (
-            <div>
-              <SectionHeader
-                icon={<CalendarClock className="h-4 w-4 text-primary" />}
-                label={t("feed.section_upcoming")}
-                count={upcoming.length}
-              />
-              <Section shifts={upcoming} />
-            </div>
-          )}
+          ))}
         </div>
       )}
     </div>
