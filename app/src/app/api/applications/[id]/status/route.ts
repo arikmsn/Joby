@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { applications, shifts } from "@/lib/schema";
+import { applications, shifts, notifications, employerProfiles } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { UserRole } from "@/lib/constants";
 import { approveApplicationSchema } from "@/lib/validators";
@@ -60,7 +60,7 @@ export async function PATCH(
 
   // Verify employer owns the shift
   const shiftRows = await db
-    .select({ employer_id: shifts.employer_id })
+    .select({ employer_id: shifts.employer_id, title: shifts.title, start_at: shifts.start_at })
     .from(shifts)
     .where(eq(shifts.id, app.shift_id))
     .limit(1);
@@ -71,6 +71,8 @@ export async function PATCH(
       { status: 403 }
     );
   }
+
+  const shift = shiftRows[0];
 
   // Only PENDING applications can be approved/rejected
   if (app.status !== "PENDING") {
@@ -104,6 +106,32 @@ export async function PATCH(
       })
       .where(eq(applications.id, appId))
       .returning();
+
+    const employerRows = await db
+      .select({ business_name: employerProfiles.business_name })
+      .from(employerProfiles)
+      .where(eq(employerProfiles.user_id, user.id))
+      .limit(1);
+    const employerName = employerRows[0]?.business_name || "";
+
+    const shiftDate = new Date(shift.start_at).toLocaleString("he-IL", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    await db.insert(notifications).values({
+      user_id: app.worker_id,
+      type: "APPLICATION_APPROVED",
+      title: t("notification.approval.title"),
+      body: t("notification.approval.body")
+        .replace("{employer}", employerName)
+        .replace("{title}", shift.title)
+        .replace("{date}", shiftDate),
+      payload: { shift_id: app.shift_id, application_id: appId },
+      channel: "in_app",
+    });
 
     return NextResponse.json({ application: updated[0] });
   }

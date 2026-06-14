@@ -4,14 +4,14 @@ import { applications, shifts, checkinEvents } from "@/lib/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { recalcTrustScore } from "@/lib/trust";
 import { Config } from "@/lib/constants";
+import { isAuthorizedCronRequest } from "@/lib/cron-auth";
 
 // GET /api/cron/auto-complete
 // 1. Auto-checkout any CHECKED_IN workers whose shift ended + checkout grace
 // 2. Mark PUBLISHED shifts as COMPLETED when shift end + grace has passed
 //    and all active applications are in terminal/checked-out state
 export async function GET(req: Request) {
-  const cronSecret = req.headers.get("x-cron-secret");
-  if (cronSecret !== process.env.CRON_SECRET && process.env.CRON_SECRET) {
+  if (!isAuthorizedCronRequest(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

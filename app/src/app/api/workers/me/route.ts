@@ -4,12 +4,8 @@ import { db } from "@/lib/db";
 import { workerProfiles } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { UserRole } from "@/lib/constants";
+import { updateWorkerMeSchema } from "@/lib/validators";
 import { t } from "@/lib/i18n/he";
-import { z } from "zod";
-
-const updateWorkerMeSchema = z.object({
-  experience_tags: z.array(z.string()).optional(),
-});
 
 export async function PATCH(req: NextRequest) {
   const userOrRes = await requireRole(req, UserRole.WORKER);
@@ -25,7 +21,22 @@ export async function PATCH(req: NextRequest) {
   }
 
   const data = parsed.data;
-  if (data.experience_tags === undefined) {
+  const updates: Record<string, unknown> = {};
+  if (data.experience_tags !== undefined) updates.experience_tags = data.experience_tags;
+  if (data.preferred_cities !== undefined) updates.preferred_cities = data.preferred_cities;
+  if (data.languages !== undefined) updates.languages = data.languages;
+  if (data.has_vehicle !== undefined) updates.has_vehicle = data.has_vehicle;
+  if (data.has_license !== undefined) updates.has_license = data.has_license;
+  if (data.license_types !== undefined) updates.license_types = data.license_types;
+  if (data.vehicle_types !== undefined) updates.vehicle_types = data.vehicle_types;
+  if (data.min_pay !== undefined) updates.min_pay = data.min_pay === null ? null : data.min_pay.toString();
+  if (data.bio !== undefined) updates.bio = data.bio;
+  if (data.city !== undefined) updates.city = data.city;
+  if (data.date_of_birth !== undefined) updates.date_of_birth = data.date_of_birth;
+  if (data.onboarding_completed) updates.onboarding_completed_at = new Date();
+  if (data.onboarding_skipped) updates.onboarding_skipped_at = new Date();
+
+  if (Object.keys(updates).length === 0) {
     return NextResponse.json(
       { error: "VALIDATION", message: t("error.validation") },
       { status: 400 }
@@ -34,7 +45,7 @@ export async function PATCH(req: NextRequest) {
 
   const updated = await db
     .update(workerProfiles)
-    .set({ experience_tags: data.experience_tags })
+    .set(updates)
     .where(eq(workerProfiles.user_id, userOrRes.id))
     .returning();
 

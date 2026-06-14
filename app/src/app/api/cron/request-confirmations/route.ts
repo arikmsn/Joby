@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { applications, shifts } from "@/lib/schema";
 import { eq, and, sql } from "drizzle-orm";
+import { isAuthorizedCronRequest } from "@/lib/cron-auth";
 
 // GET /api/cron/request-confirmations
 // Finds APPROVED non-backup applications for shifts starting within 24h.
 // MVP: returns the list. Production would send push notifications.
 export async function GET(req: Request) {
-  const cronSecret = req.headers.get("x-cron-secret");
-  if (cronSecret !== process.env.CRON_SECRET && process.env.CRON_SECRET) {
+  if (!isAuthorizedCronRequest(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

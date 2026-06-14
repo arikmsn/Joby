@@ -6,6 +6,10 @@ import { useAuth } from "@/lib/auth-context";
 import { useOccupations } from "@/lib/use-occupations";
 import { t } from "@/lib/i18n/he";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmployerAvatar } from "@/components/ui/employer-avatar";
 import {
   MapPin,
   Clock,
@@ -17,7 +21,12 @@ import {
   ArrowRight,
   CheckCircle2,
   AlertTriangle,
+  ScanLine,
+  Briefcase,
+  Wallet,
 } from "lucide-react";
+import Link from "next/link";
+import type { WorkerProfile } from "@/lib/types";
 
 interface ShiftDetail {
   id: string;
@@ -42,19 +51,40 @@ interface ShiftDetail {
   employer_name: string;
   business_name: string;
   has_sos?: boolean;
+  my_application?: { id: string; status: string; is_backup: boolean } | null;
+}
+
+function applicationStatusInfo(status: string, isBackup: boolean): { label: string; variant: "default" | "secondary" | "success" | "warning" | "danger" | "muted" | "info" } {
+  const map: Record<string, { label: string; variant: "default" | "secondary" | "success" | "warning" | "danger" | "muted" | "info" }> = {
+    PENDING: { label: t("application.status.pending"), variant: "warning" },
+    APPROVED: {
+      label: isBackup ? t("applicants.backup") : t("application.status.approved"),
+      variant: isBackup ? "info" : "success",
+    },
+    CONFIRMED: { label: t("application.status.confirmed"), variant: "success" },
+    UNCONFIRMED: { label: t("application.status.unconfirmed"), variant: "warning" },
+    REJECTED: { label: t("application.status.rejected"), variant: "danger" },
+    CANCELLED_BY_WORKER: { label: t("application.status.cancelled_by_worker"), variant: "muted" },
+    CANCELLED_BY_SYSTEM: { label: t("application.status.cancelled_by_system"), variant: "muted" },
+    NO_SHOW: { label: t("application.status.no_show"), variant: "danger" },
+    RATED: { label: t("application.status.rated"), variant: "default" },
+    CHECKED_IN: { label: t("application.status.checked_in"), variant: "success" },
+    CHECKED_OUT: { label: t("application.status.checked_out"), variant: "muted" },
+  };
+  return map[status] || { label: status, variant: "muted" };
 }
 
 export default function ShiftDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const shiftId = params.id as string;
-  const { token } = useAuth();
+  const { token, profile } = useAuth();
+  const workerProfile = profile as WorkerProfile | null;
   const { occupationLabel } = useOccupations();
   const [shift, setShift] = useState<ShiftDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [applying, setApplying] = useState(false);
-  const [applied, setApplied] = useState(false);
   const [applyMsg, setApplyMsg] = useState("");
 
   useEffect(() => {
@@ -82,11 +112,16 @@ export default function ShiftDetailsPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setApplied(true);
+        setShift((prev) => (prev ? { ...prev, my_application: { id: data.application.id, status: data.application.status, is_backup: data.application.is_backup } } : prev));
         setApplyMsg(data.message || t("apply.success"));
       } else {
         setApplyMsg(data.message || t("error.generic"));
-        if (res.status === 409 && data.error === "DUPLICATE") setApplied(true);
+        if (res.status === 409 && data.error === "DUPLICATE") {
+          // Re-fetch to get the existing application's real status
+          const r = await fetch(`/api/shifts/${shiftId}`, { headers: { Authorization: `Bearer ${token}` } });
+          const d = await r.json();
+          if (d.shift) setShift(d.shift);
+        }
       }
     } catch {
       setApplyMsg(t("error.generic"));
@@ -97,20 +132,34 @@ export default function ShiftDetailsPage() {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-5">
+        <Skeleton className="h-4 w-16" />
+        <div className="space-y-3">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-7 w-2/3" />
+          <div className="flex items-center gap-2.5">
+            <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+          <div className="flex items-end justify-between pt-3 border-t border-border-light">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-20" />
+          </div>
+        </div>
+        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-32 w-full rounded-xl" />
       </div>
     );
 
   if (error || !shift)
     return (
-      <div className="text-center py-20 px-4">
+      <div className="text-center py-20 px-4 animate-fade-in">
         <p className="font-semibold text-foreground">
           {error || t("error.shift_not_found")}
         </p>
         <button
           onClick={() => router.back()}
-          className="mt-4 rounded-full bg-primary/10 text-primary text-sm font-semibold px-4 py-2 hover:bg-primary/20 transition-colors"
+          className="mt-4 rounded-full bg-primary/10 text-primary text-sm font-semibold px-4 py-2 transition-all duration-150 hover:bg-primary/20 active:scale-[0.97]"
         >
           {t("general.back")}
         </button>
@@ -142,19 +191,36 @@ export default function ShiftDetailsPage() {
 
   const spotsLeft = shift.workers_needed - shift.slots_filled;
 
+  const preferredRoles = workerProfile?.experience_tags || [];
+  const preferredCities = workerProfile?.preferred_cities || [];
+  const fitReasons: { key: string; icon: React.ReactNode; label: string }[] = [];
+  if (preferredRoles.includes(shift.role_tag)) {
+    fitReasons.push({ key: "role", icon: <Briefcase className="h-3 w-3" />, label: t("feed.match_role") });
+  }
+  if (shift.city && preferredCities.includes(shift.city)) {
+    fitReasons.push({ key: "city", icon: <MapPin className="h-3 w-3" />, label: t("feed.match_city") });
+  }
+  if (
+    workerProfile?.min_pay != null &&
+    shift.pay_type === "hourly" &&
+    Number(shift.pay_rate) >= workerProfile.min_pay
+  ) {
+    fitReasons.push({ key: "pay", icon: <Wallet className="h-3 w-3" />, label: t("feed.match_pay") });
+  }
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 animate-fade-in">
       {/* Back button */}
       <button
         onClick={() => router.back()}
-        className="flex items-center gap-1 text-sm text-foreground-secondary hover:text-foreground transition-colors"
+        className="flex items-center gap-1 text-sm text-foreground-secondary transition-colors hover:text-foreground active:scale-[0.97]"
       >
         <ArrowRight className="h-4 w-4" />
         {t("general.back")}
       </button>
 
       {/* Header */}
-      <div className="space-y-3">
+      <Card className="space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-semibold uppercase tracking-wide text-primary">
             {occupationLabel(shift.role_tag)}
@@ -167,11 +233,14 @@ export default function ShiftDetailsPage() {
           )}
         </div>
         <h1 className="text-2xl font-bold text-foreground leading-snug">{shift.title}</h1>
-        <p className="text-foreground-secondary text-sm">
-          <span className="font-medium text-foreground">{shift.business_name}</span>
-          {" · "}
-          {t("shift.employer_verified")}
-        </p>
+        <div className="flex items-center gap-2.5">
+          <EmployerAvatar name={shift.business_name || shift.title} size="sm" />
+          <p className="text-foreground-secondary text-sm">
+            <span className="font-medium text-foreground">{shift.business_name}</span>
+            {" · "}
+            {t("shift.employer_verified")}
+          </p>
+        </div>
 
         <div className="flex items-end justify-between pt-3 border-t border-border-light">
           <div>
@@ -203,11 +272,11 @@ export default function ShiftDetailsPage() {
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Key details */}
-      <div className="divide-y divide-border-light border-y border-border-light">
-        <div className="flex items-center gap-3 py-3 text-sm">
+      <Card className="divide-y divide-border-light p-0 overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-3.5 text-sm">
           <Clock className="h-4 w-4 text-foreground-tertiary shrink-0" />
           <div>
             <div className="text-foreground font-medium">
@@ -218,7 +287,7 @@ export default function ShiftDetailsPage() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3 py-3 text-sm">
+        <div className="flex items-center gap-3 px-4 py-3.5 text-sm">
           <MapPin className="h-4 w-4 text-foreground-tertiary shrink-0" />
           <div>
             {shift.location_name && (
@@ -232,29 +301,46 @@ export default function ShiftDetailsPage() {
             )}
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Why am I seeing this */}
-      <p className="text-xs text-foreground-tertiary leading-relaxed">
-        <span className="font-medium text-foreground-secondary">{t("shift.why_shown")}</span>{" "}
-        {t("shift.why_shown_text")}
-      </p>
+      {fitReasons.length > 0 ? (
+        <div className="space-y-1.5">
+          <p className="text-xs font-medium text-foreground-secondary">{t("shift.why_shown")}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            {fitReasons.slice(0, 3).map((r) => (
+              <span
+                key={r.key}
+                className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
+              >
+                {r.icon}
+                {r.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p className="text-xs text-foreground-tertiary leading-relaxed">
+          <span className="font-medium text-foreground-secondary">{t("shift.why_shown")}</span>{" "}
+          {t("shift.why_shown_text")}
+        </p>
+      )}
 
       {/* Description */}
       {shift.description && (
-        <div className="pt-1">
+        <Card>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-tertiary mb-2">
             {t("shift.description")}
           </h3>
           <p className="text-sm text-foreground-secondary whitespace-pre-line leading-relaxed">
             {shift.description}
           </p>
-        </div>
+        </Card>
       )}
 
       {/* Requirements */}
       {(shift.dress_code || shift.gear_required || shift.arrival_notes) && (
-        <div className="pt-4 border-t border-border-light space-y-3">
+        <Card className="space-y-3">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-tertiary">
             {t("shift.requirements")}
           </h3>
@@ -297,12 +383,12 @@ export default function ShiftDetailsPage() {
               </div>
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Contact */}
       {(shift.contact_name || shift.contact_phone) && (
-        <div className="pt-4 border-t border-border-light space-y-2">
+        <Card className="space-y-2">
           {shift.contact_name && (
             <div className="flex items-center gap-3 text-sm">
               <User className="h-4 w-4 text-foreground-tertiary shrink-0" />
@@ -315,23 +401,71 @@ export default function ShiftDetailsPage() {
               <a
                 href={`tel:${shift.contact_phone}`}
                 dir="ltr"
-                className="text-primary hover:underline"
+                className="text-primary transition-colors hover:underline"
               >
                 {shift.contact_phone}
               </a>
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Apply section */}
-      <div className="sticky bottom-16 -mx-4 px-4 pt-3 pb-2 bg-background border-t border-border space-y-2">
-        {applied ? (
-          <div className="flex items-center justify-center gap-2 py-1">
-            <CheckCircle2 className="h-5 w-5 text-success" />
-            <span className="font-medium text-success">
-              {t("apply.success")}
-            </span>
+      <div className="sticky bottom-16 -mx-4 px-4 pt-3 pb-3 bg-surface border-t border-border shadow-[0_-2px_12px_-1px_rgb(0_0_0_/_0.04)] space-y-2">
+        {shift.my_application && shift.my_application.status === "CANCELLED_BY_WORKER" &&
+        shift.status === "PUBLISHED" && new Date(shift.start_at) > new Date() ? (
+          <>
+            <div className="flex items-center justify-center gap-2 py-1">
+              <Badge variant="muted">
+                {applicationStatusInfo(shift.my_application.status, shift.my_application.is_backup).label}
+              </Badge>
+            </div>
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={handleApply}
+              loading={applying}
+            >
+              {t("apply.reapply_button")}
+            </Button>
+            <p className="text-xs text-foreground-tertiary text-center">
+              {t("apply.not_commitment")}
+            </p>
+          </>
+        ) : shift.my_application ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-center gap-2 py-1">
+              <CheckCircle2 className="h-5 w-5 text-success" />
+              <Badge variant={applicationStatusInfo(shift.my_application.status, shift.my_application.is_backup).variant}>
+                {applicationStatusInfo(shift.my_application.status, shift.my_application.is_backup).label}
+              </Badge>
+            </div>
+            {!shift.my_application.is_backup &&
+              ["APPROVED", "CONFIRMED", "CHECKED_IN"].includes(shift.my_application.status) && (
+                <div className="flex gap-2">
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                      [shift.location_name, shift.address, shift.city].filter(Boolean).join(", ")
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1"
+                  >
+                    <Button variant="secondary" className="w-full" size="lg">
+                      <Navigation className="h-4 w-4" />
+                      {t("shift.open_navigation")}
+                    </Button>
+                  </a>
+                  <Link href={`/scan?shiftId=${shift.id}`} className="flex-1">
+                    <Button variant="secondary" className="w-full" size="lg">
+                      <ScanLine className="h-4 w-4" />
+                      {shift.my_application.status === "CHECKED_IN"
+                        ? t("qr.mode_checkout")
+                        : t("qr.scan_for_shift")}
+                    </Button>
+                  </Link>
+                </div>
+              )}
           </div>
         ) : (
           <>
@@ -348,8 +482,8 @@ export default function ShiftDetailsPage() {
             </p>
           </>
         )}
-        {applyMsg && !applied && (
-          <p className="text-sm text-danger mt-2 text-center">{applyMsg}</p>
+        {applyMsg && (
+          <p className={`text-sm mt-2 text-center animate-fade-in ${shift.my_application ? "text-success" : "text-danger"}`}>{applyMsg}</p>
         )}
       </div>
     </div>

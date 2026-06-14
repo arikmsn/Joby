@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { applications, shifts } from "@/lib/schema";
-import { eq } from "drizzle-orm";
-import { UserRole, TERMINAL_STATUSES } from "@/lib/constants";
+import { applications, shifts, notifications, workerProfiles, incidents } from "@/lib/schema";
+import { eq, and } from "drizzle-orm";
+import {
+  UserRole,
+  TERMINAL_STATUSES,
+  Config,
+  IncidentType,
+  IncidentStatus,
+  IncidentSeverity,
+} from "@/lib/constants";
 import { decrementSlot } from "@/lib/slots";
 import { recalcTrustScore } from "@/lib/trust";
 import { t } from "@/lib/i18n/he";
@@ -49,7 +56,12 @@ export async function POST(
   }
 
   const shiftRows = await db
-    .select({ end_at: shifts.end_at })
+    .select({
+      start_at: shifts.start_at,
+      end_at: shifts.end_at,
+      employer_id: shifts.employer_id,
+      title: shifts.title,
+    })
     .from(shifts)
     .where(eq(shifts.id, app.shift_id))
     .limit(1);
@@ -60,6 +72,13 @@ export async function POST(
       { status: 400 }
     );
   }
+
+  const shift = shiftRows[0];
+  const wasActive = app.status === "APPROVED" || app.status === "CONFIRMED";
+  const hoursUntilStart = shift
+    ? (new Date(shift.start_at!).getTime() - Date.now()) / (1000 * 60 * 60)
+    : null;
+  const isLate = wasActive && hoursUntilStart !== null && hoursUntilStart <= Config.LATE_CANCEL_WINDOW_HOURS;
 
   // If was active approved, decrement slot
   if (app.status === "APPROVED" && !app.is_backup) {
@@ -79,8 +98,60 @@ export async function POST(
   // Recalc trust after cancel
   await recalcTrustScore(user.id);
 
+  // Notify employer of cancellation
+  if (shift) {
+    await db.insert(notifications).values({
+      user_id: shift.employer_id,
+      type: "SHIFT_CANCELLATION",
+      title: t("notification.cancellation.title"),
+      body: t("notification.cancellation.body").replace("{title}", shift.title),
+      payload: { shift_id: app.shift_id, application_id: app.id, late: isLate },
+    });
+  }
+
+  // Late-cancel tracking
+  if (isLate) {
+    const profileRows = await db
+      .update(workerProfiles)
+      .set({ late_cancel_count: sql`${workerProfiles.late_cancel_count} + 1` })
+      .where(eq(workerProfiles.user_id, user.id))
+      .returning({ late_cancel_count: workerProfiles.late_cancel_count });
+
+    const lateCancelCount = profileRows[0]?.late_cancel_count ?? 0;
+
+    if (lateCancelCount >= Config.LATE_CANCEL_REVIEW_THRESHOLD) {
+      const existingIncident = await db
+        .select({ id: incidents.id })
+        .from(incidents)
+        .where(
+          and(
+            eq(incidents.related_user_id, user.id),
+            eq(incidents.incident_type, IncidentType.MANUAL_REVIEW),
+            eq(incidents.status, IncidentStatus.OPEN)
+          )
+        )
+        .limit(1);
+
+      if (existingIncident.length === 0) {
+        await db.insert(incidents).values({
+          incident_type: IncidentType.MANUAL_REVIEW,
+          severity: IncidentSeverity.MEDIUM,
+          status: IncidentStatus.OPEN,
+          title: t("incident.late_cancel.title"),
+          description: t("incident.late_cancel.description").replace(
+            "{count}",
+            String(lateCancelCount)
+          ),
+          related_user_id: user.id,
+          related_application_id: app.id,
+        });
+      }
+    }
+  }
+
   return NextResponse.json({
     application: updated[0],
     message: t("apply.cancel_success"),
+    late_cancel: isLate,
   });
 }

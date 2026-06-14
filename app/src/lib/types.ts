@@ -12,6 +12,7 @@ import type {
   UserRole,
   CheckinSource,
   NotificationChannel,
+  PaymentStatus,
 } from "./constants";
 
 // --- Database Row Types ---
@@ -39,6 +40,8 @@ export interface EmployerProfile {
   lat: number | null;
   lng: number | null;
   logo_url: string | null;
+  contact_phone: string | null;
+  description: string | null;
   created_at: string;
 }
 
@@ -55,6 +58,23 @@ export interface WorkerProfile {
   total_shifts: number;
   no_show_count: number;
   cancel_count: number;
+  late_cancel_count: number;
+  preferred_cities: string[];
+  languages: string[];
+  has_vehicle: boolean;
+  has_license: boolean;
+  license_types: string[];
+  vehicle_types: string[];
+  min_pay: number | null;
+  onboarding_completed_at: string | null;
+  onboarding_skipped_at: string | null;
+  payout_legal_name: string | null;
+  payout_id_number: string | null;
+  payout_bank_name: string | null;
+  payout_bank_branch: string | null;
+  payout_account_number: string | null;
+  payout_account_holder: string | null;
+  payout_details_completed_at: string | null;
   created_at: string;
 }
 
@@ -98,6 +118,9 @@ export interface Application {
   status: ApplicationStatus;
   is_backup: boolean;
   is_sos: boolean;
+  payment_status: PaymentStatus;
+  approved_for_payment_at: string | null;
+  paid_at: string | null;
   applied_at: string;
   approved_at: string | null;
   confirmed_at: string | null;
@@ -105,6 +128,15 @@ export interface Application {
   checked_out_at: string | null;
   cancelled_at: string | null;
   cancel_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EmployerWorkerRelation {
+  id: string;
+  employer_id: string;
+  worker_id: string;
+  is_preferred: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -29,7 +29,7 @@ export async function GET(
     return NextResponse.json({ error: "FORBIDDEN", message: t("error.forbidden") }, { status: 403 });
   }
 
-  const activeStatuses = ["APPROVED", "CONFIRMED", "CHECKED_IN", "CHECKED_OUT", "NO_SHOW"];
+  const activeStatuses = ["PENDING", "APPROVED", "CONFIRMED", "CHECKED_IN", "CHECKED_OUT", "NO_SHOW"];
   const appRows = await db
     .select({
       id: applications.id,

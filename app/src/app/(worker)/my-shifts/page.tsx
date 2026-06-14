@@ -3,11 +3,26 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useOccupations } from "@/lib/use-occupations";
+import { Config } from "@/lib/constants";
 import { t } from "@/lib/i18n/he";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EmployerAvatar } from "@/components/ui/employer-avatar";
+import { CelebrationToast } from "@/components/ui/celebration-toast";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { ShiftListSkeleton } from "@/components/ui/skeleton";
+import { Calendar } from "lucide-react";
 import Link from "next/link";
-import { MapPin, Clock, Banknote, ChevronLeft } from "lucide-react";
+import {
+  MapPin,
+  Clock,
+  Banknote,
+  ChevronLeft,
+  ChevronDown,
+  Navigation,
+  Phone,
+  CheckCircle2,
+} from "lucide-react";
 
 interface MyApplication {
   id: string;
@@ -27,6 +42,9 @@ interface MyApplication {
   shift_status: string;
   shift_location_name: string | null;
   shift_address: string;
+  shift_arrival_notes: string | null;
+  shift_contact_name: string | null;
+  shift_contact_phone: string | null;
   business_name: string;
 }
 
@@ -42,6 +60,8 @@ const HISTORY_STATUSES = [
   "NO_SHOW",
   "RATED",
 ];
+
+const SEEN_APPROVALS_KEY = "joby_seen_approvals";
 
 function statusBadge(status: string, isBackup: boolean) {
   const map: Record<
@@ -100,6 +120,8 @@ export default function MyShiftsPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("approved");
   const [actionId, setActionId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [celebration, setCelebration] = useState<MyApplication | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -107,18 +129,43 @@ export default function MyShiftsPage() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
-      .then((d) => setApps(d.applications || []))
+      .then((d) => {
+        const list: MyApplication[] = d.applications || [];
+        setApps(list);
+
+        // Celebrate newly-approved (non-backup) shifts the worker hasn't seen yet
+        let seen: string[] = [];
+        try {
+          seen = JSON.parse(localStorage.getItem(SEEN_APPROVALS_KEY) || "[]");
+        } catch {
+          seen = [];
+        }
+        const newlyApproved = list.find(
+          (a) =>
+            ["APPROVED", "CONFIRMED"].includes(a.status) &&
+            !a.is_backup &&
+            !seen.includes(a.id)
+        );
+        if (newlyApproved) {
+          setCelebration(newlyApproved);
+        }
+        const approvedIds = list
+          .filter((a) => ["APPROVED", "CONFIRMED", "CHECKED_IN"].includes(a.status))
+          .map((a) => a.id);
+        try {
+          localStorage.setItem(SEEN_APPROVALS_KEY, JSON.stringify(approvedIds));
+        } catch {
+          /* ignore */
+        }
+      })
       .catch(() => setApps([]))
       .finally(() => setLoading(false));
   }, [token]);
 
-  async function handleAction(appId: string, action: "confirm" | "cancel") {
+  async function handleAction(appId: string) {
     setActionId(appId);
     try {
-      const url =
-        action === "confirm"
-          ? `/api/applications/${appId}/confirm`
-          : `/api/applications/${appId}/cancel`;
+      const url = `/api/applications/${appId}/cancel`;
       const res = await fetch(url, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -130,9 +177,7 @@ export default function MyShiftsPage() {
             a.id === appId
               ? {
                   ...a,
-                  status:
-                    data.application?.status ||
-                    (action === "cancel" ? "CANCELLED_BY_WORKER" : "CONFIRMED"),
+                  status: data.application?.status || "CANCELLED_BY_WORKER",
                 }
               : a
           )
@@ -171,6 +216,13 @@ export default function MyShiftsPage() {
     });
   }
 
+  function mapsUrl(app: MyApplication) {
+    const query = encodeURIComponent(
+      [app.shift_location_name, app.shift_address, app.shift_city].filter(Boolean).join(", ")
+    );
+    return `https://www.google.com/maps/search/?api=1&query=${query}`;
+  }
+
   const tabs: { key: Tab; label: string; count: number }[] = [
     {
       key: "pending",
@@ -191,127 +243,242 @@ export default function MyShiftsPage() {
 
   return (
     <div className="space-y-4">
+      {celebration && (
+        <CelebrationToast
+          title={t("celebration.title")}
+          subtitle={`${celebration.business_name} · ${celebration.shift_title}`}
+          onDismiss={() => setCelebration(null)}
+        />
+      )}
+
       <h1 className="text-xl font-bold text-foreground">
         {t("my_shifts.title")}
       </h1>
 
       {/* Tabs */}
-      <div className="flex border-b border-border">
-        {tabs.map((tb) => (
-          <button
-            key={tb.key}
-            onClick={() => setTab(tb.key)}
-            className={`flex-1 pb-2.5 text-sm font-medium border-b-2 transition-colors ${
-              tab === tb.key
-                ? "border-primary text-foreground"
-                : "border-transparent text-foreground-tertiary hover:text-foreground-secondary"
-            }`}
-          >
-            {tb.label}
-            {tb.count > 0 && <span className="text-foreground-tertiary"> {tb.count}</span>}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        layoutId="my-shifts-tab-pill"
+        options={tabs.map((tb) => ({
+          value: tb.key,
+          label: tb.label,
+          badge: tb.count,
+        }))}
+        value={tab}
+        onChange={setTab}
+      />
 
       {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
+        <ShiftListSkeleton rows={3} />
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20 px-4">
+        <div className="animate-fade-in flex flex-col items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-16 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background">
+            <Calendar className="h-6 w-6 text-foreground-tertiary" />
+          </div>
           <p className="text-foreground-secondary">{emptyMsg}</p>
           {tab !== "history" && (
             <Link
               href="/shifts"
-              className="mt-4 inline-block rounded-full bg-primary/10 text-primary text-sm font-semibold px-4 py-2 hover:bg-primary/20 transition-colors"
+              className="mt-1 inline-flex items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-semibold px-4 py-2 transition-all duration-150 hover:bg-primary/20 active:scale-[0.97]"
             >
               {t("feed.title")}
             </Link>
           )}
         </div>
       ) : (
-        <div className="rounded-2xl border border-border bg-surface divide-y divide-border-light overflow-hidden">
-          {filtered.map((app) => (
-            <div key={app.id} className="p-4">
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <Link
-                  href={`/shifts/${app.shift_id}`}
-                  className="min-w-0 group"
-                >
-                  <div className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-                    {app.shift_title}
+        <div className="space-y-3">
+          {filtered.map((app, i) => {
+            const isConfirmedForWorker =
+              tab === "approved" && !app.is_backup && app.status !== "CHECKED_IN";
+            const hasArrivalInfo =
+              app.shift_location_name ||
+              app.shift_address ||
+              app.shift_arrival_notes ||
+              app.shift_contact_name ||
+              app.shift_contact_phone;
+            const expanded = expandedId === app.id;
+
+            return (
+              <div
+                key={app.id}
+                className={`animate-card-pop overflow-hidden rounded-2xl border transition-all ${
+                  isConfirmedForWorker
+                    ? "approved-glow border-primary/30 shadow-card"
+                    : "border-border bg-surface"
+                }`}
+                style={{ animationDelay: `${Math.min(i, 6) * 40}ms` }}
+              >
+                <div className="p-4">
+                  <div className="flex items-start gap-3">
+                    <EmployerAvatar name={app.business_name || app.shift_title} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <Link href={`/shifts/${app.shift_id}`} className="min-w-0 group">
+                          <div className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                            {app.shift_title}
+                          </div>
+                          <p className="text-sm text-foreground-secondary truncate mt-0.5">
+                            {app.business_name} · {occupationLabel(app.shift_role_tag)}
+                          </p>
+                        </Link>
+                        {statusBadge(app.status, app.is_backup)}
+                      </div>
+
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground-secondary mt-2">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5 text-foreground-tertiary" />
+                          {fmt(app.shift_start_at)}
+                        </span>
+                        {app.shift_city && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3.5 w-3.5 text-foreground-tertiary" />
+                            {app.shift_city}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1 font-medium text-foreground">
+                          <Banknote className="h-3.5 w-3.5 text-primary" />
+                          {t("general.currency")}
+                          {formatPay(app.shift_pay_rate)}{" "}
+                          <span className="font-normal text-foreground-secondary">
+                            {app.shift_pay_type === "hourly"
+                              ? t("shift.per_hour")
+                              : t("shift.total")}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-sm text-foreground-secondary truncate mt-0.5">
-                    {app.business_name} · {occupationLabel(app.shift_role_tag)}
-                  </p>
-                </Link>
-                {statusBadge(app.status, app.is_backup)}
-              </div>
 
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground-secondary mb-3">
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5 text-foreground-tertiary" />
-                  {fmt(app.shift_start_at)}
-                </span>
-                {app.shift_city && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-foreground-tertiary" />
-                    {app.shift_city}
-                  </span>
-                )}
-                <span className="flex items-center gap-1 font-medium text-foreground">
-                  <Banknote className="h-3.5 w-3.5 text-primary" />
-                  {t("general.currency")}
-                  {formatPay(app.shift_pay_rate)}{" "}
-                  <span className="font-normal text-foreground-secondary">
-                    {app.shift_pay_type === "hourly"
-                      ? t("shift.per_hour")
-                      : t("shift.total")}
-                  </span>
-                </span>
-              </div>
-
-              {(app.status === "APPROVED" && !app.is_backup) ||
-              tab === "pending" ||
-              (tab === "approved" && app.status !== "CHECKED_IN") ? (
-                <div className="flex items-center gap-2 pt-3 border-t border-border-light">
-                  {app.status === "APPROVED" && !app.is_backup && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleAction(app.id, "confirm")}
-                      loading={actionId === app.id}
-                    >
-                      {t("confirm.button")}
-                    </Button>
+                  {isConfirmedForWorker && (
+                    <div className="flex items-center gap-1.5 mt-3 text-xs font-semibold text-primary">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      {t("my_shifts.confirmed_badge")}
+                      <span className="text-foreground-tertiary font-normal">
+                        · {t("my_shifts.next_step_hint")}
+                      </span>
+                    </div>
                   )}
-                  {(tab === "pending" ||
-                    (tab === "approved" &&
-                      app.status !== "CHECKED_IN")) && (
+                </div>
+
+                {/* Arrival details (approved/confirmed/checked-in, non-backup) */}
+                {tab === "approved" && !app.is_backup && hasArrivalInfo && (
+                  <div className="border-t border-border-light">
+                    <button
+                      onClick={() => setExpandedId(expanded ? null : app.id)}
+                      className="flex w-full items-center justify-between px-4 py-2.5 text-sm font-medium text-foreground-secondary hover:text-foreground hover:bg-background transition-colors"
+                    >
+                      {expanded ? t("shift.hide_details") : t("shift.arrival_details")}
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                    {expanded && (
+                      <div className="px-4 pb-3 space-y-2 text-sm">
+                        {(app.shift_location_name || app.shift_address) && (
+                          <div className="flex items-start gap-2 text-foreground-secondary">
+                            <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-foreground-tertiary" />
+                            <div>
+                              {app.shift_location_name && (
+                                <div className="font-medium text-foreground">
+                                  {app.shift_location_name}
+                                </div>
+                              )}
+                              <div>{app.shift_address}</div>
+                            </div>
+                          </div>
+                        )}
+                        {app.shift_arrival_notes && (
+                          <div className="flex items-start gap-2 text-foreground-secondary">
+                            <Navigation className="h-4 w-4 mt-0.5 shrink-0 text-foreground-tertiary" />
+                            <span>{app.shift_arrival_notes}</span>
+                          </div>
+                        )}
+                        {app.shift_contact_name && (
+                          <div className="flex items-center gap-2 text-foreground-secondary">
+                            <Phone className="h-4 w-4 shrink-0 text-foreground-tertiary" />
+                            <span>{app.shift_contact_name}</span>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          <a
+                            href={mapsUrl(app)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1"
+                          >
+                            <Button variant="secondary" size="sm" className="w-full">
+                              <Navigation className="h-3.5 w-3.5" />
+                              {t("shift.open_navigation")}
+                            </Button>
+                          </a>
+                          {app.shift_contact_phone && (
+                            <a href={`tel:${app.shift_contact_phone}`} className="flex-1">
+                              <Button variant="secondary" size="sm" className="w-full">
+                                <Phone className="h-3.5 w-3.5" />
+                                {t("shift.call_contact")}
+                              </Button>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Actions */}
+                {tab === "pending" && (
+                  <div className="flex items-center gap-2 px-4 pb-4 pt-1 border-t border-border-light">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-danger hover:text-danger hover:bg-danger/5"
+                      className="text-danger hover:text-danger hover:bg-danger/5 active:scale-[0.97]"
                       onClick={() => {
-                        if (confirm(t("apply.cancel_confirm")))
-                          handleAction(app.id, "cancel");
+                        if (confirm(t("apply.cancel_confirm"))) handleAction(app.id);
                       }}
                       loading={actionId === app.id}
                     >
                       {t("apply.cancel")}
                     </Button>
-                  )}
-                  <Link
-                    href={`/shifts/${app.shift_id}`}
-                    className="flex items-center gap-1 text-sm text-foreground-tertiary hover:text-foreground-secondary transition-colors mr-auto"
-                  >
-                    {t("feed.view_details")}
-                    <ChevronLeft className="h-3.5 w-3.5" />
-                  </Link>
-                </div>
-              ) : null}
-            </div>
-          ))}
+                    <Link
+                      href={`/shifts/${app.shift_id}`}
+                      className="flex items-center gap-1 text-sm text-foreground-tertiary hover:text-foreground-secondary transition-colors mr-auto"
+                    >
+                      {t("feed.view_details")}
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                )}
+                {tab === "approved" && app.status !== "CHECKED_IN" && (
+                  <div className="flex items-center gap-2 px-4 pb-4 pt-1 border-t border-border-light">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-danger hover:text-danger hover:bg-danger/5 active:scale-[0.97]"
+                      onClick={() => {
+                        const hoursUntilStart =
+                          (new Date(app.shift_start_at).getTime() - Date.now()) / (1000 * 60 * 60);
+                        const isLate = hoursUntilStart <= Config.LATE_CANCEL_WINDOW_HOURS;
+                        const confirmMsg = isLate
+                          ? t("apply.cancel_late_confirm")
+                          : t("apply.cancel_confirm");
+                        if (confirm(confirmMsg)) handleAction(app.id);
+                      }}
+                      loading={actionId === app.id}
+                    >
+                      {t("apply.cancel")}
+                    </Button>
+                    <Link
+                      href={`/shifts/${app.shift_id}`}
+                      className="flex items-center gap-1 text-sm text-foreground-tertiary hover:text-foreground-secondary transition-colors mr-auto"
+                    >
+                      {t("feed.view_details")}
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

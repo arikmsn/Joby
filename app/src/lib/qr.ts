@@ -4,7 +4,12 @@
 
 import { Config } from "./constants";
 
-const QR_SECRET = process.env.JWT_SECRET || "dev-secret-change-in-production-min-32-chars!";
+function getQrSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET environment variable is required");
+  return secret;
+}
+const QR_SECRET = getQrSecret();
 
 /**
  * Generate a signed QR token for check-in/out.

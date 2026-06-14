@@ -8,8 +8,12 @@ import {
   LogOut,
   Menu,
   X,
+  Building2,
+  Users,
+  BarChart3,
 } from "lucide-react";
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { NavLink } from "./nav-link";
 import { RoleMismatchBanner } from "./role-mismatch-banner";
 import { JobyMark } from "@/components/ui/joby-mark";
@@ -58,12 +62,27 @@ export function EmployerLayout({ children }: { children: ReactNode }) {
             icon={<Plus className="h-5 w-5" />}
             label={t("shift.create")}
           />
+          <NavLink
+            href="/known-workers"
+            icon={<Users className="h-5 w-5" />}
+            label={t("nav.known_workers")}
+          />
+          <NavLink
+            href="/reports"
+            icon={<BarChart3 className="h-5 w-5" />}
+            label={t("nav.reports")}
+          />
+          <NavLink
+            href="/business"
+            icon={<Building2 className="h-5 w-5" />}
+            label={t("nav.profile")}
+          />
         </nav>
 
         <div className="p-3 border-t border-border">
           <button
             onClick={logout}
-            className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-foreground-secondary hover:bg-gray-50 hover:text-foreground rounded-lg transition-colors"
+            className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-foreground-secondary hover:bg-gray-50 hover:text-foreground rounded-lg transition-all duration-150 active:scale-[0.98]"
           >
             <LogOut className="h-4 w-4" />
             {t("auth.logout")}
@@ -78,9 +97,17 @@ export function EmployerLayout({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-1 -mr-1 text-foreground-secondary"
+                className="p-1.5 -mr-1 rounded-lg text-foreground-secondary transition-colors duration-150 hover:bg-background active:scale-90"
               >
-                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                <motion.span
+                  key={mobileMenuOpen ? "close" : "open"}
+                  initial={{ opacity: 0, rotate: -45 }}
+                  animate={{ opacity: 1, rotate: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="flex"
+                >
+                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </motion.span>
               </button>
               <div className="flex items-center gap-2">
                 <JobyMark className="h-6 w-6" />
@@ -96,35 +123,63 @@ export function EmployerLayout({ children }: { children: ReactNode }) {
             )}
           </div>
 
-          {mobileMenuOpen && (
-            <nav className="mt-3 pt-3 border-t border-border space-y-1">
-              <NavLink
-                href="/dashboard"
-                icon={<LayoutDashboard className="h-5 w-5" />}
-                label={t("nav.dashboard")}
-                onClick={() => setMobileMenuOpen(false)}
-              />
-              <NavLink
-                href="/manage-shifts"
-                icon={<CalendarDays className="h-5 w-5" />}
-                label={t("nav.shifts")}
-                onClick={() => setMobileMenuOpen(false)}
-              />
-              <NavLink
-                href="/manage-shifts/new"
-                icon={<Plus className="h-5 w-5" />}
-                label={t("shift.create")}
-                onClick={() => setMobileMenuOpen(false)}
-              />
-              <button
-                onClick={() => { setMobileMenuOpen(false); logout(); }}
-                className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-foreground-secondary hover:bg-gray-50 rounded-lg"
+          <AnimatePresence initial={false}>
+            {mobileMenuOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                className="overflow-hidden"
               >
-                <LogOut className="h-4 w-4" />
-                {t("auth.logout")}
-              </button>
-            </nav>
-          )}
+                <nav className="mt-3 pt-3 border-t border-border space-y-1">
+                  <NavLink
+                    href="/dashboard"
+                    icon={<LayoutDashboard className="h-5 w-5" />}
+                    label={t("nav.dashboard")}
+                    onClick={() => setMobileMenuOpen(false)}
+                  />
+                  <NavLink
+                    href="/manage-shifts"
+                    icon={<CalendarDays className="h-5 w-5" />}
+                    label={t("nav.shifts")}
+                    onClick={() => setMobileMenuOpen(false)}
+                  />
+                  <NavLink
+                    href="/manage-shifts/new"
+                    icon={<Plus className="h-5 w-5" />}
+                    label={t("shift.create")}
+                    onClick={() => setMobileMenuOpen(false)}
+                  />
+                  <NavLink
+                    href="/known-workers"
+                    icon={<Users className="h-5 w-5" />}
+                    label={t("nav.known_workers")}
+                    onClick={() => setMobileMenuOpen(false)}
+                  />
+                  <NavLink
+                    href="/reports"
+                    icon={<BarChart3 className="h-5 w-5" />}
+                    label={t("nav.reports")}
+                    onClick={() => setMobileMenuOpen(false)}
+                  />
+                  <NavLink
+                    href="/business"
+                    icon={<Building2 className="h-5 w-5" />}
+                    label={t("nav.profile")}
+                    onClick={() => setMobileMenuOpen(false)}
+                  />
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); logout(); }}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-foreground-secondary hover:bg-gray-50 rounded-lg transition-colors duration-150 active:scale-[0.98]"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    {t("auth.logout")}
+                  </button>
+                </nav>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </header>
 
         <RoleMismatchBanner />

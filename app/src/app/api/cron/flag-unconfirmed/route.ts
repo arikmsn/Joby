@@ -3,13 +3,13 @@ import { db } from "@/lib/db";
 import { applications, shifts } from "@/lib/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { decrementSlot } from "@/lib/slots";
+import { isAuthorizedCronRequest } from "@/lib/cron-auth";
 
 // GET /api/cron/flag-unconfirmed
 // Cancels approved workers who failed to confirm attendance.
 // Confirmation cutoff: 2 hours before shift start.
 export async function GET(req: Request) {
-  const cronSecret = req.headers.get("x-cron-secret");
-  if (cronSecret !== process.env.CRON_SECRET && process.env.CRON_SECRET) {
+  if (!isAuthorizedCronRequest(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

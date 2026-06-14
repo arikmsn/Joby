@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { shifts, users, employerProfiles, sosBroadcasts } from "@/lib/schema";
+import { shifts, users, employerProfiles, sosBroadcasts, applications } from "@/lib/schema";
 import { requireRole, requireAuth } from "@/lib/auth";
 import { createShiftSchema, shiftFilterSchema } from "@/lib/validators";
 import { UserRole, ShiftStatus } from "@/lib/constants";
-import { eq, and, gte, lte, ilike, sql, desc, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, ilike, sql, asc, inArray } from "drizzle-orm";
 
 // POST /api/shifts — create a new shift (employer only)
 export async function POST(req: NextRequest) {
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "VALIDATION", message: "פרמטרים לא תקינים" }, { status: 400 });
   }
 
-  const { role_tag, city, date, page, limit } = parsed.data;
+  const { role_tag, role_tags, city, date, page, limit } = parsed.data;
   const offset = (page - 1) * limit;
   const conditions = [];
 
@@ -80,7 +80,12 @@ export async function GET(req: NextRequest) {
     conditions.push(eq(shifts.employer_id, authUser.id));
   }
 
-  if (role_tag) conditions.push(eq(shifts.role_tag, role_tag));
+  const roleTagList = role_tags ? role_tags.split(",").map((r) => r.trim()).filter(Boolean) : [];
+  if (roleTagList.length > 0) {
+    conditions.push(inArray(shifts.role_tag, roleTagList));
+  } else if (role_tag) {
+    conditions.push(eq(shifts.role_tag, role_tag));
+  }
   if (city) conditions.push(ilike(shifts.city, `%${city}%`));
   if (date) {
     const dayStart = new Date(date);
@@ -124,31 +129,76 @@ export async function GET(req: NextRequest) {
       .leftJoin(users, eq(shifts.employer_id, users.id))
       .leftJoin(employerProfiles, eq(shifts.employer_id, employerProfiles.user_id))
       .where(where)
-      .orderBy(desc(shifts.start_at))
+      .orderBy(asc(shifts.start_at))
       .limit(limit)
       .offset(offset),
     db.select({ count: sql<number>`count(*)::int` }).from(shifts).where(where),
   ]);
 
-  // For worker feed: check which shifts have active SOS
+  // For worker feed: check which shifts have active SOS, and which the worker already applied to
   let sosShiftIds: Set<string> = new Set();
+  let myApplications: Map<string, { id: string; status: string; is_backup: boolean }> = new Map();
   if (authUser.role === UserRole.WORKER && rows.length > 0) {
     const shiftIds = rows.map((r) => r.id);
-    const sosRows = await db
-      .select({ shift_id: sosBroadcasts.shift_id })
-      .from(sosBroadcasts)
-      .where(
-        and(
-          eq(sosBroadcasts.status, "ACTIVE"),
-          inArray(sosBroadcasts.shift_id, shiftIds)
-        )
-      );
+    const [sosRows, appRows] = await Promise.all([
+      db
+        .select({ shift_id: sosBroadcasts.shift_id })
+        .from(sosBroadcasts)
+        .where(
+          and(
+            eq(sosBroadcasts.status, "ACTIVE"),
+            inArray(sosBroadcasts.shift_id, shiftIds)
+          )
+        ),
+      db
+        .select({
+          shift_id: applications.shift_id,
+          id: applications.id,
+          status: applications.status,
+          is_backup: applications.is_backup,
+        })
+        .from(applications)
+        .where(
+          and(
+            eq(applications.worker_id, authUser.id),
+            inArray(applications.shift_id, shiftIds)
+          )
+        ),
+    ]);
     sosShiftIds = new Set(sosRows.map((r) => r.shift_id));
+    myApplications = new Map(appRows.map((r) => [r.shift_id, { id: r.id, status: r.status, is_backup: r.is_backup }]));
+  }
+
+  // For employer list: surface applicant activity (pending / backup) per shift
+  const applicantCounts: Map<string, { pending_count: number; backup_count: number }> = new Map();
+  if (authUser.role === UserRole.EMPLOYER && rows.length > 0) {
+    const shiftIds = rows.map((r) => r.id);
+    const countRows = await db
+      .select({
+        shift_id: applications.shift_id,
+        status: applications.status,
+        is_backup: applications.is_backup,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(applications)
+      .where(inArray(applications.shift_id, shiftIds))
+      .groupBy(applications.shift_id, applications.status, applications.is_backup);
+
+    for (const row of countRows) {
+      const entry = applicantCounts.get(row.shift_id) || { pending_count: 0, backup_count: 0 };
+      if (row.status === "PENDING") entry.pending_count += row.count;
+      if (row.is_backup && (row.status === "APPROVED" || row.status === "CONFIRMED")) entry.backup_count += row.count;
+      applicantCounts.set(row.shift_id, entry);
+    }
   }
 
   const data = rows.map((r) => ({
     ...r,
     has_sos: sosShiftIds.has(r.id),
+    my_application: myApplications.get(r.id) ?? null,
+    ...(authUser.role === UserRole.EMPLOYER
+      ? { applicants: applicantCounts.get(r.id) || { pending_count: 0, backup_count: 0 } }
+      : {}),
   }));
 
   return NextResponse.json({

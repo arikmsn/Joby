@@ -21,19 +21,23 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const base =
-      "inline-flex items-center justify-center rounded-[var(--radius)] font-medium transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]";
+      "relative inline-flex items-center justify-center rounded-[var(--radius)] font-medium select-none " +
+      "transition-[transform,box-shadow,background-color,border-color,color,opacity] duration-200 ease-out " +
+      "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background " +
+      "disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 disabled:shadow-none " +
+      "active:scale-[0.97] will-change-transform";
 
     const variants = {
       primary:
-        "bg-primary text-white hover:bg-primary-hover shadow-sm hover:shadow focus-visible:ring-primary",
+        "bg-primary text-white shadow-sm shadow-primary/20 hover:bg-primary-hover hover:shadow-md hover:shadow-primary/25 hover:-translate-y-[1px] active:translate-y-0 focus-visible:ring-primary",
       secondary:
-        "border border-border bg-surface text-foreground hover:bg-gray-50 focus-visible:ring-primary",
+        "border border-border bg-surface text-foreground shadow-sm hover:bg-background hover:border-foreground-tertiary/40 hover:-translate-y-[1px] active:translate-y-0 focus-visible:ring-primary",
       danger:
-        "bg-danger text-white hover:bg-red-700 shadow-sm focus-visible:ring-danger",
+        "bg-danger text-white shadow-sm shadow-danger/20 hover:bg-red-700 hover:shadow-md hover:shadow-danger/25 hover:-translate-y-[1px] active:translate-y-0 focus-visible:ring-danger",
       ghost:
-        "text-foreground-secondary hover:bg-gray-100 hover:text-foreground focus-visible:ring-primary",
+        "text-foreground-secondary hover:bg-background hover:text-foreground active:bg-border-light focus-visible:ring-primary",
       success:
-        "bg-success text-white hover:bg-green-700 shadow-sm focus-visible:ring-success",
+        "bg-success text-white shadow-sm shadow-success/20 hover:bg-green-700 hover:shadow-md hover:shadow-success/25 hover:-translate-y-[1px] active:translate-y-0 focus-visible:ring-success",
     };
 
     const sizes = {
@@ -49,9 +53,17 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || loading}
         {...props}
       >
+        <span
+          className={cn(
+            "inline-flex items-center justify-center gap-[inherit] transition-opacity duration-150",
+            loading && "opacity-0"
+          )}
+        >
+          {children}
+        </span>
         {loading && (
           <svg
-            className="animate-spin h-4 w-4"
+            className="absolute inset-0 m-auto h-4 w-4 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -71,7 +83,6 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             />
           </svg>
         )}
-        {children}
       </button>
     );
   }

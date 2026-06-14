@@ -29,6 +29,9 @@ export async function GET(req: NextRequest) {
       shift_status: shifts.status,
       shift_location_name: shifts.location_name,
       shift_address: shifts.address,
+      shift_arrival_notes: shifts.arrival_notes,
+      shift_contact_name: shifts.contact_name,
+      shift_contact_phone: shifts.contact_phone,
       employer_name: users.full_name,
       business_name: employerProfiles.business_name,
     })

@@ -11,8 +11,15 @@ import Link from "next/link";
 import { Building2, User } from "lucide-react";
 import { JobyMark } from "@/components/ui/joby-mark";
 import { roleHomePath, type AuthRole } from "@/lib/auth-routes";
+import type { User as AppUser, EmployerProfile, WorkerProfile } from "@/lib/types";
 
-type Step = "phone" | "otp";
+type Step = "phone" | "otp" | "choose";
+
+interface AccountOption {
+  token: string;
+  user: AppUser;
+  profile: EmployerProfile | WorkerProfile | null;
+}
 
 export function LoginForm({ role }: { role?: AuthRole }) {
   const router = useRouter();
@@ -23,6 +30,7 @@ export function LoginForm({ role }: { role?: AuthRole }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [devOtp, setDevOtp] = useState("");
+  const [accounts, setAccounts] = useState<AccountOption[]>([]);
 
   // Already-logged-in users visiting an auth page go straight to their system.
   useEffect(() => {
@@ -75,6 +83,12 @@ export function LoginForm({ role }: { role?: AuthRole }) {
         return;
       }
 
+      if (data.accounts && data.accounts.length > 1) {
+        setAccounts(data.accounts);
+        setStep("choose");
+        return;
+      }
+
       login(data.token, data.user, data.profile);
 
       const home = roleHomePath(data.user.role);
@@ -90,6 +104,11 @@ export function LoginForm({ role }: { role?: AuthRole }) {
     }
   }
 
+  function handleChooseAccount(account: AccountOption) {
+    login(account.token, account.user, account.profile);
+    router.push(roleHomePath(account.user.role));
+  }
+
   const title =
     role === "worker"
       ? t("auth.worker.login_title")
@@ -103,6 +122,37 @@ export function LoginForm({ role }: { role?: AuthRole }) {
     return (
       <div className="text-center py-10">
         <p className="text-foreground-secondary">{t("general.loading")}</p>
+      </div>
+    );
+  }
+
+  // Phone has access to more than one interface — let the user pick.
+  if (step === "choose") {
+    return (
+      <div className="space-y-8">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center mb-4">
+            <JobyMark className="h-14 w-14" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">{t("auth.choose_role_title")}</h1>
+        </div>
+
+        <div className="space-y-3">
+          {accounts.map((account) => (
+            <button
+              key={account.user.id}
+              onClick={() => handleChooseAccount(account)}
+              className="w-full flex items-center gap-4 p-4 bg-surface rounded-xl border border-border hover:border-primary hover:shadow-card-hover transition-all text-right"
+            >
+              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-primary" />
+              </div>
+              <div className="font-semibold text-foreground">
+                {account.user.role === "admin" ? t("auth.admin") : t("auth.employer")}
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
     );
   }

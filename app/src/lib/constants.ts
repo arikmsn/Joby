@@ -47,6 +47,20 @@ export const SLOT_COUNTED_STATUSES: ApplicationStatus[] = [
   ApplicationStatus.RATED,
 ];
 
+// --- Payment Status (per application / payout item) ---
+export const PaymentStatus = {
+  PENDING: "PENDING",
+  APPROVED_FOR_PAYMENT: "APPROVED_FOR_PAYMENT",
+  PAID: "PAID",
+} as const;
+export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus];
+
+// Application statuses that represent completed work (eligible for payment/reporting)
+export const PAYABLE_STATUSES: ApplicationStatus[] = [
+  ApplicationStatus.CHECKED_OUT,
+  ApplicationStatus.RATED,
+];
+
 // --- SOS Status ---
 export const SOSStatus = {
   INACTIVE: "INACTIVE",
@@ -126,6 +140,48 @@ export const NotificationChannel = {
 export type NotificationChannel =
   (typeof NotificationChannel)[keyof typeof NotificationChannel];
 
+// --- Cities (MVP-fixed list for preferences/filters) ---
+export const ISRAEL_CITIES = [
+  "תל אביב",
+  "ירושלים",
+  "חיפה",
+  "פתח תקווה",
+  "רמת גן",
+  "הרצליה",
+  "חולון",
+  "באר שבע",
+  "נתניה",
+  "ראשון לציון",
+] as const;
+
+// --- Languages (MVP-fixed list for worker profile) ---
+export const WORKER_LANGUAGES = [
+  { key: "he", label_he: "עברית" },
+  { key: "en", label_he: "אנגלית" },
+  { key: "ar", label_he: "ערבית" },
+  { key: "ru", label_he: "רוסית" },
+  { key: "fr", label_he: "צרפתית" },
+  { key: "es", label_he: "ספרדית" },
+  { key: "am", label_he: "אמהרית" },
+] as const;
+
+// --- Driver license types (legal license held by worker) ---
+export const LICENSE_TYPES = [
+  { key: "car", label_he: "רכב פרטי (B)" },
+  { key: "motorcycle", label_he: "אופנוע" },
+  { key: "truck", label_he: "משאית" },
+  { key: "transport", label_he: "הסעת נוסעים" },
+  { key: "forklift", label_he: "מלגזה" },
+  { key: "other", label_he: "אחר" },
+] as const;
+
+// --- Vehicle availability in practice (separate from legal license type) ---
+export const VEHICLE_TYPES = [
+  { key: "car", label_he: "רכב פרטי" },
+  { key: "motorcycle", label_he: "אופנוע / קטנוע" },
+  { key: "other", label_he: "אחר" },
+] as const;
+
 // --- Configuration ---
 export const Config = {
   // Trust
@@ -139,7 +195,12 @@ export const Config = {
   DEFAULT_CONFIRMATION_WINDOW_HOURS: 12,
   DEFAULT_CHECKIN_GRACE_MINUTES: 15,
   DEFAULT_CHECKOUT_GRACE_MINUTES: 30,
+  CHECKIN_WINDOW_BEFORE_MINUTES: 30, // worker CHECK_IN scan opens this many minutes before shift start
   UNCONFIRMED_CUTOFF_HOURS: 2,
+
+  // Late cancellation policy
+  LATE_CANCEL_WINDOW_HOURS: 2, // cancelling an approved shift within this many hours of start counts as "late"
+  LATE_CANCEL_REVIEW_THRESHOLD: 3, // late cancels before a review incident is opened
 
   // QR
   QR_TOKEN_TTL_MINUTES: 5,
@@ -152,4 +213,9 @@ export const Config = {
   // Pagination
   DEFAULT_PAGE_SIZE: 20,
   MAX_PAGE_SIZE: 100,
+
+  // Reporting / payments (estimates only — see CLAUDE.md: not the legal employer)
+  // Platform fee charged on top of worker pay, used only to compute
+  // estimated employer billing / platform margin in reporting screens.
+  PLATFORM_FEE_PERCENT: 15,
 } as const;

@@ -47,6 +47,7 @@ export default function AdminWorkersPage() {
     setLoading(true);
     const params = new URLSearchParams();
     if (q) params.set("q", q);
+    params.set("limit", "100");
     fetch(`/api/admin/workers?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
     })

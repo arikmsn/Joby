@@ -21,7 +21,8 @@ export async function POST(req: NextRequest) {
   }
 
   const { phone } = parsed.data;
-  const result = await createAndSendOTP(phone);
+  const debugSecret = req.headers.get("x-otp-debug-secret");
+  const result = await createAndSendOTP(phone, debugSecret);
 
   if (!result.success) {
     if (result.error === "RATE_LIMITED") {
@@ -37,8 +38,11 @@ export async function POST(req: NextRequest) {
   }
 
   const response: Record<string, unknown> = { sent: true };
-  if (result.devOtp) {
-    response.devOtp = result.devOtp;
+  if (result.debugOtp) {
+    response.debugOtp = result.debugOtp;
+  }
+  if (result.providerStatus) {
+    response.providerStatus = result.providerStatus;
   }
 
   return NextResponse.json(response);

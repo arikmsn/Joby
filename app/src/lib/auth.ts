@@ -6,9 +6,12 @@ import { eq } from "drizzle-orm";
 import type { AuthUser } from "./types";
 import type { UserRole } from "./constants";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "dev-secret-change-in-production-min-32-chars!"
-);
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET environment variable is required");
+  return new TextEncoder().encode(secret);
+}
+const JWT_SECRET = getJwtSecret();
 const JWT_ISSUER = "joby-shiftmatch";
 const JWT_EXPIRY = "7d";
 

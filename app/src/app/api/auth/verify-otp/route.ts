@@ -4,9 +4,10 @@ import { verifyOTP } from "@/lib/otp";
 import { signToken } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users, employerProfiles, workerProfiles } from "@/lib/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { t } from "@/lib/i18n/he";
 import { UserRole } from "@/lib/constants";
+import { phoneVariants } from "@/lib/phone";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { phone, otp } = parsed.data;
-  const otpResult = verifyOTP(phone, otp);
+  const otpResult = await verifyOTP(phone, otp);
 
   if (!otpResult.valid) {
     const message =
@@ -61,6 +62,58 @@ export async function POST(req: NextRequest) {
         { error: "SUSPENDED", message: t("error.user_suspended") },
         { status: 403 }
       );
+    }
+
+    // The same real-world phone number may exist as more than one user
+    // record under different formats (e.g. "+972502463555" vs "0502463555"),
+    // representing separate role accounts (employer + admin). If the
+    // phone has access to more than one such account, let the user choose
+    // which one to enter instead of silently picking one.
+    const variants = phoneVariants(phone);
+    const accountRows = await db
+      .select({
+        id: users.id,
+        phone: users.phone,
+        role: users.role,
+        full_name: users.full_name,
+        is_active: users.is_active,
+      })
+      .from(users)
+      .where(
+        and(
+          inArray(users.phone, variants),
+          inArray(users.role, [UserRole.EMPLOYER, UserRole.ADMIN]),
+          eq(users.is_active, true)
+        )
+      );
+
+    if (accountRows.length > 1) {
+      const accounts = await Promise.all(
+        accountRows.map(async (u) => {
+          const accountToken = await signToken({
+            userId: u.id,
+            role: u.role as UserRole,
+          });
+          let accountProfile = null;
+          if (u.role === UserRole.EMPLOYER) {
+            const rows = await db
+              .select()
+              .from(employerProfiles)
+              .where(eq(employerProfiles.user_id, u.id))
+              .limit(1);
+            accountProfile = rows[0] ?? null;
+          }
+          return { token: accountToken, user: u, profile: accountProfile };
+        })
+      );
+
+      return NextResponse.json({
+        token: null,
+        user: null,
+        profile: null,
+        isNewUser: false,
+        accounts,
+      });
     }
 
     const token = await signToken({

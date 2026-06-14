@@ -54,8 +54,8 @@ export async function POST(req: NextRequest) {
       const now = new Date();
       const start = new Date(shiftRows[0].start_at!);
       const end = new Date(shiftRows[0].end_at!);
-      const graceMs = Config.DEFAULT_CHECKIN_GRACE_MINUTES * 60000;
-      if (now < new Date(start.getTime() - graceMs) || now > end) {
+      const windowMs = Config.CHECKIN_WINDOW_BEFORE_MINUTES * 60000;
+      if (now < new Date(start.getTime() - windowMs) || now > end) {
         return NextResponse.json({ error: "WINDOW", message: t("checkin.window_error") }, { status: 400 });
       }
     }

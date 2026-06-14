@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrustBadge } from "@/components/ui/trust-badge";
 import { Button } from "@/components/ui/button";
+import { Config } from "@/lib/constants";
 import Link from "next/link";
 
 interface AttendanceRecord {
@@ -46,6 +47,13 @@ export default function AttendancePage() {
   const [sosMessage, setSosMessage] = useState("");
   const [qrToken, setQrToken] = useState("");
   const [qrMode, setQrMode] = useState<QrMode>("CHECK_IN");
+  const [qrGeneratedAt, setQrGeneratedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchAttendance = useCallback(async () => {
     if (!token) return;
@@ -77,8 +85,14 @@ export default function AttendancePage() {
       });
       const d = await res.json();
       setQrToken(d.token || "");
-    } catch { setQrToken(""); }
+      setQrGeneratedAt(d.token ? Date.now() : null);
+    } catch { setQrToken(""); setQrGeneratedAt(null); }
   }
+
+  const qrSecondsLeft = qrGeneratedAt
+    ? Math.max(0, Config.QR_TOKEN_TTL_MINUTES * 60 - Math.floor((now - qrGeneratedAt) / 1000))
+    : 0;
+  const qrExpired = qrGeneratedAt !== null && qrSecondsLeft === 0;
 
   async function manualAction(appId: string, action: "checkin" | "checkout") {
     setActionId(appId);
@@ -119,6 +133,7 @@ export default function AttendancePage() {
 
   function statusBadge(status: string) {
     const map: Record<string, { label: string; variant: "default" | "secondary" | "success" | "warning" | "danger" | "muted" }> = {
+      PENDING: { label: t("application.status.pending"), variant: "secondary" },
       APPROVED: { label: t("attendance.status.approved"), variant: "warning" },
       CONFIRMED: { label: t("attendance.status.confirmed"), variant: "default" },
       CHECKED_IN: { label: t("attendance.status.checked_in"), variant: "success" },
@@ -167,15 +182,46 @@ export default function AttendancePage() {
         <CardContent className="p-4">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="font-medium text-sm text-foreground">{t("qr.generate")}:</span>
-            <Button size="sm" onClick={() => generateQr("CHECK_IN")}>{t("qr.mode_checkin")}</Button>
-            <Button size="sm" variant="secondary" onClick={() => generateQr("CHECK_OUT")}>{t("qr.mode_checkout")}</Button>
+            <Button
+              size="sm"
+              variant={qrToken && qrMode === "CHECK_IN" ? "primary" : "secondary"}
+              onClick={() => generateQr("CHECK_IN")}
+            >
+              {t("qr.mode_checkin")}
+            </Button>
+            <Button
+              size="sm"
+              variant={qrToken && qrMode === "CHECK_OUT" ? "primary" : "secondary"}
+              onClick={() => generateQr("CHECK_OUT")}
+            >
+              {t("qr.mode_checkout")}
+            </Button>
           </div>
           {qrToken && (
-            <div className="mt-3 p-3 bg-background rounded-lg">
-              <p className="text-xs text-foreground-tertiary mb-1">
-                {qrMode === "CHECK_IN" ? t("qr.mode_checkin") : t("qr.mode_checkout")} — QR Token:
-              </p>
+            <div className="mt-3 p-3 bg-background rounded-lg space-y-2">
+              <div className="flex items-center justify-between">
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                    qrMode === "CHECK_IN" ? "bg-success/10 text-success" : "bg-info/10 text-info"
+                  }`}
+                >
+                  {t("qr.mode_active")}: {qrMode === "CHECK_IN" ? t("qr.mode_checkin") : t("qr.mode_checkout")}
+                </span>
+                {qrExpired ? (
+                  <span className="text-xs text-danger font-medium">{t("qr.token_expired")}</span>
+                ) : (
+                  <span className="text-xs text-foreground-tertiary">
+                    {t("qr.token_expires_in")}{Math.floor(qrSecondsLeft / 60)}:{String(qrSecondsLeft % 60).padStart(2, "0")}
+                  </span>
+                )}
+              </div>
               <p className="font-mono text-xs break-all select-all text-foreground" dir="ltr">{qrToken}</p>
+              <p className="text-xs text-foreground-tertiary">{t("qr.show_to_worker")}</p>
+              {qrExpired && (
+                <Button size="sm" variant="secondary" onClick={() => generateQr(qrMode)}>
+                  {t("qr.refresh")}
+                </Button>
+              )}
             </div>
           )}
         </CardContent>

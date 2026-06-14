@@ -33,7 +33,7 @@ import {
 import { recalcTrustScore } from "./trust";
 
 // --- Reserved phone prefixes (idempotency) ---
-const ADMIN_PHONE = "+972500999999";
+const ADMIN_PHONE = "+972502463555";
 const EMPLOYER_PHONE_PREFIX = "+97250090";
 const WORKER_PHONE_PREFIX = "+97250091";
 

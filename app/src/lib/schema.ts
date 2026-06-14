@@ -45,6 +45,8 @@ export const employerProfiles = pgTable("employer_profiles", {
   lat: decimal("lat", { precision: 10, scale: 7 }),
   lng: decimal("lng", { precision: 10, scale: 7 }),
   logo_url: text("logo_url"),
+  contact_phone: varchar("contact_phone", { length: 20 }),
+  description: text("description"),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
@@ -68,6 +70,23 @@ export const workerProfiles = pgTable("worker_profiles", {
   total_shifts: integer("total_shifts").default(0),
   no_show_count: integer("no_show_count").default(0),
   cancel_count: integer("cancel_count").default(0),
+  late_cancel_count: integer("late_cancel_count").notNull().default(0),
+  preferred_cities: text("preferred_cities").array().notNull().default([]),
+  languages: text("languages").array().notNull().default([]),
+  has_vehicle: boolean("has_vehicle").notNull().default(false),
+  has_license: boolean("has_license").notNull().default(false),
+  license_types: text("license_types").array().notNull().default([]),
+  vehicle_types: text("vehicle_types").array().notNull().default([]),
+  min_pay: decimal("min_pay", { precision: 10, scale: 2 }),
+  onboarding_completed_at: timestamp("onboarding_completed_at", { withTimezone: true }),
+  onboarding_skipped_at: timestamp("onboarding_skipped_at", { withTimezone: true }),
+  payout_legal_name: varchar("payout_legal_name", { length: 255 }),
+  payout_id_number: varchar("payout_id_number", { length: 50 }),
+  payout_bank_name: varchar("payout_bank_name", { length: 100 }),
+  payout_bank_branch: varchar("payout_bank_branch", { length: 20 }),
+  payout_account_number: varchar("payout_account_number", { length: 50 }),
+  payout_account_holder: varchar("payout_account_holder", { length: 255 }),
+  payout_details_completed_at: timestamp("payout_details_completed_at", { withTimezone: true }),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
@@ -110,6 +129,9 @@ export const applications = pgTable("applications", {
   worker_id: uuid("worker_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   status: varchar("status", { length: 30 }).notNull().default("PENDING"),
   is_backup: boolean("is_backup").notNull().default(false),
+  payment_status: varchar("payment_status", { length: 30 }).notNull().default("PENDING"),
+  approved_for_payment_at: timestamp("approved_for_payment_at", { withTimezone: true }),
+  paid_at: timestamp("paid_at", { withTimezone: true }),
   applied_at: timestamp("applied_at", { withTimezone: true }).defaultNow(),
   approved_at: timestamp("approved_at", { withTimezone: true }),
   rejected_at: timestamp("rejected_at", { withTimezone: true }),
@@ -183,6 +205,16 @@ export const incidents = pgTable("incidents", {
   resolved_at: timestamp("resolved_at", { withTimezone: true }),
 });
 
+// --- Employer/Worker Relations (known workers) ---
+export const employerWorkerRelations = pgTable("employer_worker_relations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  employer_id: uuid("employer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  worker_id: uuid("worker_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  is_preferred: boolean("is_preferred").notNull().default(false),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
 // --- Notifications ---
 export const notifications = pgTable("notifications", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -194,4 +226,20 @@ export const notifications = pgTable("notifications", {
   channel: varchar("channel", { length: 20 }).notNull().default("in_app"),
   is_read: boolean("is_read").notNull().default(false),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+// ── OTP tables (DB-backed OTP store for serverless) ──────────
+
+export const otpCodes = pgTable("otp_codes", {
+  phone: varchar("phone", { length: 20 }).primaryKey(),
+  otp: varchar("otp", { length: 10 }).notNull(),
+  expires_at: timestamp("expires_at", { withTimezone: true }).notNull(),
+  attempts: integer("attempts").notNull().default(0),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+export const otpRateLimits = pgTable("otp_rate_limits", {
+  phone: varchar("phone", { length: 20 }).primaryKey(),
+  count: integer("count").notNull().default(1),
+  reset_at: timestamp("reset_at", { withTimezone: true }).notNull(),
 });

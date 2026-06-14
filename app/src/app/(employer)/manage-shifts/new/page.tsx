@@ -7,6 +7,7 @@ import { t } from "@/lib/i18n/he";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { TimeSelect } from "@/components/ui/time-select";
 import type { OccupationOption } from "@/components/ui/occupation-picker";
 
 export default function CreateShiftPage() {
@@ -30,8 +31,9 @@ export default function CreateShiftPage() {
     location_name: "",
     city: "",
     address: "",
-    start_at: "",
-    end_at: "",
+    date: "",
+    start_time: "",
+    end_time: "",
     pay_rate: "",
     pay_type: "hourly",
     workers_needed: "1",
@@ -47,10 +49,24 @@ export default function CreateShiftPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  const isOvernight = !!(form.start_time && form.end_time && form.end_time <= form.start_time);
+
+  function computeTimes() {
+    const start = new Date(`${form.date}T${form.start_time}`);
+    const end = new Date(`${form.date}T${form.end_time}`);
+    if (isOvernight) end.setDate(end.getDate() + 1);
+    return { start, end };
+  }
+
   async function submit(publish: boolean) {
     setError("");
+    if (form.start_time === form.end_time) {
+      setError(t("shift.end_time_required"));
+      return;
+    }
     setLoading(true);
     try {
+      const { start, end } = computeTimes();
       const body = {
         title: form.title,
         role_tag: form.role_tag,
@@ -58,8 +74,8 @@ export default function CreateShiftPage() {
         location_name: form.location_name || undefined,
         city: form.city || undefined,
         address: form.address,
-        start_at: new Date(form.start_at).toISOString(),
-        end_at: new Date(form.end_at).toISOString(),
+        start_at: start.toISOString(),
+        end_at: end.toISOString(),
         pay_rate: parseFloat(form.pay_rate),
         pay_type: form.pay_type,
         workers_needed: parseInt(form.workers_needed) || 1,
@@ -119,16 +135,29 @@ export default function CreateShiftPage() {
             </div>
             <Input id="address" label={t("shift.address")} value={form.address} onChange={(e) => set("address", e.target.value)} />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="start_at" className="block text-sm font-medium text-foreground mb-1">{t("shift.start_at")}</label>
-                <input id="start_at" type="datetime-local" className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" dir="ltr" value={form.start_at} onChange={(e) => set("start_at", e.target.value)} />
-              </div>
-              <div>
-                <label htmlFor="end_at" className="block text-sm font-medium text-foreground mb-1">{t("shift.end_at")}</label>
-                <input id="end_at" type="datetime-local" className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" dir="ltr" value={form.end_at} onChange={(e) => set("end_at", e.target.value)} />
-              </div>
+            <div>
+              <label htmlFor="date" className="block text-sm font-medium text-foreground mb-1">{t("shift.date")}</label>
+              <input id="date" type="date" className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" dir="ltr" value={form.date} onChange={(e) => set("date", e.target.value)} />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <TimeSelect id="start_time" label={t("shift.start_time")} value={form.start_time} onChange={(e) => set("start_time", e.target.value)} />
+              <TimeSelect id="end_time" label={t("shift.end_time")} value={form.end_time} onChange={(e) => set("end_time", e.target.value)} />
+            </div>
+            {isOvernight && (
+              <p className="text-xs text-info bg-info/10 rounded-lg px-3 py-2">{t("shift.overnight_notice")}</p>
+            )}
+            {form.start_time && form.end_time && form.start_time !== form.end_time && (
+              <p className="text-xs text-foreground-tertiary">
+                {t("shift.duration_label")}: {(() => {
+                  const { start, end } = computeTimes();
+                  const hours = Math.round(((end.getTime() - start.getTime()) / 3600000) * 10) / 10;
+                  return `${hours} ${t("shift.hours_unit")}`;
+                })()}
+              </p>
+            )}
+            {form.start_time && form.end_time && form.start_time === form.end_time && (
+              <p className="text-xs text-danger">{t("shift.end_time_required")}</p>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Input id="pay_rate" label={`${t("shift.pay_rate")} (${t("general.currency")})`} type="number" dir="ltr" value={form.pay_rate} onChange={(e) => set("pay_rate", e.target.value)} />
@@ -155,10 +184,10 @@ export default function CreateShiftPage() {
             {error && <p className="text-sm text-danger">{error}</p>}
 
             <div className="flex gap-3 pt-2">
-              <Button onClick={() => submit(true)} loading={loading} disabled={!form.title || !form.role_tag || !form.address || !form.start_at || !form.end_at || !form.pay_rate}>
+              <Button onClick={() => submit(true)} loading={loading} disabled={!form.title || !form.role_tag || !form.address || !form.date || !form.start_time || !form.end_time || !form.pay_rate}>
                 {t("shift.publish")}
               </Button>
-              <Button variant="secondary" onClick={() => submit(false)} loading={loading} disabled={!form.title || !form.role_tag || !form.address || !form.start_at || !form.end_at || !form.pay_rate}>
+              <Button variant="secondary" onClick={() => submit(false)} loading={loading} disabled={!form.title || !form.role_tag || !form.address || !form.date || !form.start_time || !form.end_time || !form.pay_rate}>
                 {t("shift.save_draft")}
               </Button>
               <Button variant="ghost" onClick={() => router.back()}>

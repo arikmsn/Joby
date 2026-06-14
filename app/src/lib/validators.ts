@@ -101,6 +101,7 @@ export const shiftStatusSchema = z.object({
 
 export const shiftFilterSchema = z.object({
   role_tag: z.string().optional(),
+  role_tags: z.string().optional(),
   city: z.string().optional(),
   date: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
@@ -189,6 +190,33 @@ export const adminShiftFilterSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+// --- Profiles ---
+
+export const updateWorkerMeSchema = z.object({
+  experience_tags: z.array(z.string()).optional(),
+  preferred_cities: z.array(z.string()).optional(),
+  languages: z.array(z.string()).optional(),
+  has_vehicle: z.boolean().optional(),
+  has_license: z.boolean().optional(),
+  license_types: z.array(z.string()).optional(),
+  vehicle_types: z.array(z.string()).optional(),
+  min_pay: z.number().min(0).max(1000).nullable().optional(),
+  bio: z.string().max(500).nullable().optional(),
+  city: z.string().max(100).nullable().optional(),
+  date_of_birth: z.string().nullable().optional(),
+  onboarding_completed: z.boolean().optional(),
+  onboarding_skipped: z.boolean().optional(),
+});
+
+export const updateEmployerMeSchema = z.object({
+  business_name: z.string().min(2).max(255).optional(),
+  business_type: z.string().max(100).nullable().optional(),
+  address: z.string().max(500).nullable().optional(),
+  city: z.string().max(100).nullable().optional(),
+  contact_phone: z.string().max(20).nullable().optional(),
+  description: z.string().max(1000).nullable().optional(),
+});
+
 export const adminCreateOccupationSchema = z.object({
   key: z
     .string()
@@ -215,6 +243,48 @@ export const adminIncidentFilterSchema = z.object({
 export const adminUpdateIncidentSchema = z.object({
   status: z.enum(["OPEN", "IN_REVIEW", "RESOLVED", "DISMISSED"]),
   resolution_notes: z.string().max(2000).optional(),
+});
+
+// --- Known Workers / Invites (Sprint 6) ---
+
+export const togglePreferredWorkerSchema = z.object({
+  is_preferred: z.boolean(),
+});
+
+export const inviteWorkerSchema = z.object({
+  worker_id: z.string().uuid(),
+  shift_id: z.string().uuid(),
+});
+
+export const workerSearchByPhoneSchema = z.object({
+  phone: z
+    .string()
+    .min(9)
+    .max(15)
+    .regex(/^\+?[0-9]+$/, "מספר טלפון לא תקין"),
+});
+
+// --- Payment status (Sprint 6, admin) ---
+
+export const updatePaymentStatusSchema = z.object({
+  payment_status: z.enum(["APPROVED_FOR_PAYMENT", "PAID"]),
+});
+
+// --- Worker payout details (Sprint 6) ---
+
+export const updatePayoutDetailsSchema = z.object({
+  payout_legal_name: z.string().max(255).nullable().optional(),
+  payout_id_number: z.string().max(50).nullable().optional(),
+  payout_bank_name: z.string().max(100).nullable().optional(),
+  payout_bank_branch: z.string().max(20).nullable().optional(),
+  payout_account_number: z.string().max(50).nullable().optional(),
+  payout_account_holder: z.string().max(255).nullable().optional(),
+});
+
+// --- Reports range (Sprint 6) ---
+
+export const reportRangeSchema = z.object({
+  range: z.enum(["today", "week", "month"]).default("today"),
 });
 
 // Type exports

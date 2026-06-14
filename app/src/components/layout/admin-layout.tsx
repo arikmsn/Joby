@@ -10,6 +10,7 @@ import {
   Building2,
   CalendarDays,
   Tags,
+  BarChart3,
 } from "lucide-react";
 import { NavLink } from "./nav-link";
 import { useAuth } from "@/lib/auth-context";
@@ -51,6 +52,11 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             href="/admin-shifts"
             icon={<CalendarDays className="h-5 w-5" />}
             label={t("nav.shifts")}
+          />
+          <NavLink
+            href="/admin-reports"
+            icon={<BarChart3 className="h-5 w-5" />}
+            label={t("nav.reports")}
           />
           <NavLink
             href="/catalog"

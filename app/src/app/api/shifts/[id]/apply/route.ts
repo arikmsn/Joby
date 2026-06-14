@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { applications, shifts, workerProfiles } from "@/lib/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { UserRole } from "@/lib/constants";
 import { findOverlap } from "@/lib/overlap";
 import { t } from "@/lib/i18n/he";
@@ -58,9 +58,9 @@ export async function POST(
     }
   }
 
-  // Check duplicate
+  // Check for an existing application (most recent first)
   const existing = await db
-    .select({ id: applications.id })
+    .select({ id: applications.id, status: applications.status })
     .from(applications)
     .where(
       and(
@@ -68,9 +68,11 @@ export async function POST(
         eq(applications.worker_id, user.id)
       )
     )
+    .orderBy(desc(applications.applied_at))
     .limit(1);
 
-  if (existing.length > 0) {
+  const reapplyRow = existing.find((a) => a.status === "CANCELLED_BY_WORKER");
+  if (existing.length > 0 && !reapplyRow) {
     return NextResponse.json(
       { error: "DUPLICATE", message: t("apply.already_applied") },
       { status: 409 }
@@ -89,6 +91,28 @@ export async function POST(
     return NextResponse.json(
       { error: "OVERLAP", message: `${t("apply.overlap")}: ${overlapTitle}` },
       { status: 409 }
+    );
+  }
+
+  if (reapplyRow) {
+    // Re-apply: reopen the previously-cancelled application, preserving its history/id
+    const reopened = await db
+      .update(applications)
+      .set({
+        status: "PENDING",
+        is_backup: false,
+        applied_at: sql`now()`,
+        approved_at: null,
+        rejected_at: null,
+        cancelled_at: null,
+        updated_at: sql`now()`,
+      })
+      .where(eq(applications.id, reapplyRow.id))
+      .returning();
+
+    return NextResponse.json(
+      { application: reopened[0], message: t("apply.reapply_success") },
+      { status: 201 }
     );
   }
 

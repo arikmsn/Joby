@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { shifts, users, employerProfiles } from "@/lib/schema";
+import { shifts, users, employerProfiles, applications } from "@/lib/schema";
 import { requireAuth, requireRole } from "@/lib/auth";
 import { updateShiftSchema } from "@/lib/validators";
 import { UserRole, ShiftStatus } from "@/lib/constants";
@@ -49,10 +49,25 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ error: "NOT_FOUND", message: "משמרת לא נמצאה" }, { status: 404 });
   }
 
-  // Workers can only see published shifts
+  // Workers can only see published shifts (unless they already applied)
   const shift = rows[0];
-  if (authUser.role === UserRole.WORKER && shift.status !== ShiftStatus.PUBLISHED) {
-    return NextResponse.json({ error: "NOT_FOUND", message: "משמרת לא נמצאה" }, { status: 404 });
+
+  let myApplication: { id: string; status: string; is_backup: boolean } | null = null;
+  if (authUser.role === UserRole.WORKER) {
+    const appRows = await db
+      .select({
+        id: applications.id,
+        status: applications.status,
+        is_backup: applications.is_backup,
+      })
+      .from(applications)
+      .where(and(eq(applications.shift_id, shift.id), eq(applications.worker_id, authUser.id)))
+      .limit(1);
+    myApplication = appRows[0] ?? null;
+
+    if (shift.status !== ShiftStatus.PUBLISHED && !myApplication) {
+      return NextResponse.json({ error: "NOT_FOUND", message: "משמרת לא נמצאה" }, { status: 404 });
+    }
   }
 
   // Employers can only see their own shifts
@@ -60,7 +75,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ error: "FORBIDDEN", message: "אין הרשאה" }, { status: 403 });
   }
 
-  return NextResponse.json({ shift });
+  return NextResponse.json({ shift: { ...shift, my_application: myApplication } });
 }
 
 // PATCH /api/shifts/:id — edit shift (employer only, draft only for full edit, limited edit for published)

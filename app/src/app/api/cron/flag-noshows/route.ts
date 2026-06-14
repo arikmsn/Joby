@@ -5,13 +5,13 @@ import { eq, and, sql } from "drizzle-orm";
 import { decrementSlot } from "@/lib/slots";
 import { recalcTrustScore } from "@/lib/trust";
 import { Config } from "@/lib/constants";
+import { isAuthorizedCronRequest } from "@/lib/cron-auth";
 
 // GET /api/cron/flag-noshows
 // Marks active approved/confirmed (non-backup) workers as NO_SHOW
 // if the shift is past start + grace window and they never checked in.
 export async function GET(req: Request) {
-  const cronSecret = req.headers.get("x-cron-secret");
-  if (cronSecret !== process.env.CRON_SECRET && process.env.CRON_SECRET) {
+  if (!isAuthorizedCronRequest(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

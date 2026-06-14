@@ -8,16 +8,28 @@ import { t } from "@/lib/i18n/he";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { TimeSelect } from "@/components/ui/time-select";
 import { Badge } from "@/components/ui/badge";
 import { TrustBadge } from "@/components/ui/trust-badge";
+import { Collapsible } from "@/components/ui/collapsible";
 import Link from "next/link";
 
-function toLocalDatetime(iso: string) {
+const INACTIVE_APPLICANT_STATUSES = ["REJECTED", "CANCELLED_BY_WORKER", "CANCELLED_BY_SYSTEM", "NO_SHOW"];
+
+function toLocalDate(iso: string) {
   if (!iso) return "";
   const d = new Date(iso);
   const offset = d.getTimezoneOffset();
   const local = new Date(d.getTime() - offset * 60000);
-  return local.toISOString().slice(0, 16);
+  return local.toISOString().slice(0, 10);
+}
+
+function toLocalTime(iso: string) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const offset = d.getTimezoneOffset();
+  const local = new Date(d.getTime() - offset * 60000);
+  return local.toISOString().slice(11, 16);
 }
 
 interface Applicant {
@@ -44,14 +56,24 @@ export default function EditShiftPage() {
   const [shift, setShift] = useState<Record<string, unknown> | null>(null);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [knownWorkers, setKnownWorkers] = useState<Map<string, number>>(new Map());
   const [form, setForm] = useState({
     title: "", role_tag: "", description: "", location_name: "", city: "", address: "",
-    start_at: "", end_at: "", pay_rate: "", pay_type: "hourly", workers_needed: "1",
+    date: "", start_time: "", end_time: "", pay_rate: "", pay_type: "hourly", workers_needed: "1",
     dress_code: "", gear_required: "", arrival_notes: "", contact_name: "", contact_phone: "", min_trust_score: "0",
   });
 
   function set(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  const isOvernight = !!(form.start_time && form.end_time && form.end_time <= form.start_time);
+
+  function computeTimes() {
+    const start = new Date(`${form.date}T${form.start_time}`);
+    const end = new Date(`${form.date}T${form.end_time}`);
+    if (isOvernight) end.setDate(end.getDate() + 1);
+    return { start, end };
   }
 
   const fetchApplicants = useCallback(async () => {
@@ -78,7 +100,7 @@ export default function EditShiftPage() {
         setForm({
           title: s.title || "", role_tag: s.role_tag || "", description: s.description || "",
           location_name: s.location_name || "", city: s.city || "", address: s.address || "",
-          start_at: toLocalDatetime(s.start_at), end_at: toLocalDatetime(s.end_at),
+          date: toLocalDate(s.start_at), start_time: toLocalTime(s.start_at), end_time: toLocalTime(s.end_at),
           pay_rate: s.pay_rate || "", pay_type: s.pay_type || "hourly",
           workers_needed: String(s.workers_needed || 1),
           dress_code: s.dress_code || "", gear_required: s.gear_required || "",
@@ -92,15 +114,36 @@ export default function EditShiftPage() {
     fetchApplicants();
   }, [token, shiftId, fetchApplicants]);
 
+  useEffect(() => {
+    if (!token) return;
+    fetch("/api/employers/known-workers", { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((d) => {
+        const map = new Map<string, number>();
+        for (const w of d.workers || []) map.set(w.worker_id, w.times_worked);
+        setKnownWorkers(map);
+      })
+      .catch(() => {});
+  }, [token]);
+
+  const activeApplicants = applicants.filter((a) => !INACTIVE_APPLICANT_STATUSES.includes(a.status));
+  const inactiveApplicants = applicants.filter((a) => INACTIVE_APPLICANT_STATUSES.includes(a.status));
+
   async function saveChanges() {
-    setError(""); setSaving(true);
+    setError("");
+    if (shift?.status === "DRAFT" && form.start_time === form.end_time) {
+      setError(t("shift.end_time_required"));
+      return;
+    }
+    setSaving(true);
     try {
       const body: Record<string, unknown> = {};
       if (shift?.status === "DRAFT") {
+        const { start, end } = computeTimes();
         body.title = form.title; body.role_tag = form.role_tag;
         body.address = form.address;
-        body.start_at = new Date(form.start_at).toISOString();
-        body.end_at = new Date(form.end_at).toISOString();
+        body.start_at = start.toISOString();
+        body.end_at = end.toISOString();
         body.pay_rate = parseFloat(form.pay_rate);
         body.pay_type = form.pay_type;
         body.workers_needed = parseInt(form.workers_needed) || 1;
@@ -212,16 +255,20 @@ export default function EditShiftPage() {
               <Input id="city" label={t("shift.city")} value={form.city} onChange={(e) => set("city", e.target.value)} disabled={!isDraft} />
             </div>
             <Input id="address" label={t("shift.address")} value={form.address} onChange={(e) => set("address", e.target.value)} disabled={!isDraft} />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="start_at" className="block text-sm font-medium text-foreground mb-1">{t("shift.start_at")}</label>
-                <input id="start_at" type="datetime-local" className="w-full rounded-lg border border-border px-3 py-2 text-sm disabled:bg-background disabled:text-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" dir="ltr" value={form.start_at} onChange={(e) => set("start_at", e.target.value)} disabled={!isDraft} />
-              </div>
-              <div>
-                <label htmlFor="end_at" className="block text-sm font-medium text-foreground mb-1">{t("shift.end_at")}</label>
-                <input id="end_at" type="datetime-local" className="w-full rounded-lg border border-border px-3 py-2 text-sm disabled:bg-background disabled:text-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" dir="ltr" value={form.end_at} onChange={(e) => set("end_at", e.target.value)} disabled={!isDraft} />
-              </div>
+            <div>
+              <label htmlFor="date" className="block text-sm font-medium text-foreground mb-1">{t("shift.date")}</label>
+              <input id="date" type="date" className="w-full rounded-lg border border-border px-3 py-2 text-sm disabled:bg-background disabled:text-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" dir="ltr" value={form.date} onChange={(e) => set("date", e.target.value)} disabled={!isDraft} />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <TimeSelect id="start_time" label={t("shift.start_time")} value={form.start_time} onChange={(e) => set("start_time", e.target.value)} disabled={!isDraft} />
+              <TimeSelect id="end_time" label={t("shift.end_time")} value={form.end_time} onChange={(e) => set("end_time", e.target.value)} disabled={!isDraft} />
+            </div>
+            {isDraft && isOvernight && (
+              <p className="text-xs text-info bg-info/10 rounded-lg px-3 py-2">{t("shift.overnight_notice")}</p>
+            )}
+            {isDraft && form.start_time && form.end_time && form.start_time === form.end_time && (
+              <p className="text-xs text-danger">{t("shift.end_time_required")}</p>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Input id="pay_rate" label={`${t("shift.pay_rate")} (${t("general.currency")})`} type="number" dir="ltr" value={form.pay_rate} onChange={(e) => set("pay_rate", e.target.value)} disabled={!isDraft} />
               <div>
@@ -268,50 +315,83 @@ export default function EditShiftPage() {
             {applicants.length === 0 ? (
               <p className="text-sm text-foreground-tertiary text-center py-4">{t("applicants.no_applicants")}</p>
             ) : (
-              <div className="space-y-3">
-                {applicants.map((app) => (
-                  <div key={app.id} className="flex items-center justify-between border border-border rounded-xl p-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">{app.worker_name}</span>
-                        <AppStatusBadge status={app.status} isBackup={app.is_backup} />
-                        {app.worker_trust && <TrustBadge score={app.worker_trust} />}
-                      </div>
-                      <div className="text-sm text-foreground-tertiary mt-0.5">
-                        {app.worker_phone} {app.worker_city && `· ${app.worker_city}`}
-                      </div>
-                    </div>
+              <>
+                {activeApplicants.length === 0 ? (
+                  <p className="text-sm text-foreground-tertiary text-center py-4">{t("applicants.no_applicants")}</p>
+                ) : (
+                  <div className="space-y-3">
+                    {activeApplicants.map((app) => (
+                      <div key={app.id} className="flex items-center justify-between border border-border rounded-xl p-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground">{app.worker_name}</span>
+                            <AppStatusBadge status={app.status} isBackup={app.is_backup} />
+                            {app.worker_trust && <TrustBadge score={app.worker_trust} />}
+                            {knownWorkers.has(app.worker_id) && (
+                              <Badge variant="info">{t("known_workers.worked_before")}</Badge>
+                            )}
+                          </div>
+                          <div className="text-sm text-foreground-tertiary mt-0.5">
+                            {app.worker_phone} {app.worker_city && `· ${app.worker_city}`}
+                          </div>
+                        </div>
 
-                    {app.status === "PENDING" && (
-                      <div className="flex gap-2 shrink-0">
-                        <Button
-                          size="sm"
-                          onClick={() => handleApplicantAction(app.id, "APPROVED", false)}
-                          loading={actionLoading === app.id}
-                        >
-                          {t("applicants.approve_active")}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleApplicantAction(app.id, "APPROVED", true)}
-                          loading={actionLoading === app.id}
-                        >
-                          {t("applicants.approve_backup")}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="danger"
-                          onClick={() => handleApplicantAction(app.id, "REJECTED", false)}
-                          loading={actionLoading === app.id}
-                        >
-                          {t("applicants.reject")}
-                        </Button>
+                        {app.status === "PENDING" && (
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              size="sm"
+                              onClick={() => handleApplicantAction(app.id, "APPROVED", false)}
+                              loading={actionLoading === app.id}
+                            >
+                              {t("applicants.approve_active")}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => handleApplicantAction(app.id, "APPROVED", true)}
+                              loading={actionLoading === app.id}
+                            >
+                              {t("applicants.approve_backup")}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              onClick={() => handleApplicantAction(app.id, "REJECTED", false)}
+                              loading={actionLoading === app.id}
+                            >
+                              {t("applicants.reject")}
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+
+                {inactiveApplicants.length > 0 && (
+                  <Collapsible
+                    className="mt-4 pt-3 border-t border-border-light"
+                    trigger={`${t("applicants.inactive_title")} (${inactiveApplicants.length})`}
+                  >
+                    <div className="space-y-3 mt-3">
+                      {inactiveApplicants.map((app) => (
+                        <div key={app.id} className="flex items-center justify-between border border-border-light rounded-xl p-3 opacity-70 transition-opacity hover:opacity-90">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-foreground">{app.worker_name}</span>
+                              <AppStatusBadge status={app.status} isBackup={app.is_backup} />
+                              {app.worker_trust && <TrustBadge score={app.worker_trust} />}
+                            </div>
+                            <div className="text-sm text-foreground-tertiary mt-0.5">
+                              {app.worker_phone} {app.worker_city && `· ${app.worker_city}`}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Collapsible>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

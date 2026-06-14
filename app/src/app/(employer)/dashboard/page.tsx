@@ -5,6 +5,8 @@ import { useAuth } from "@/lib/auth-context";
 import { useOccupations } from "@/lib/use-occupations";
 import { t } from "@/lib/i18n/he";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Skeleton, ShiftListSkeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -15,6 +17,8 @@ import {
   TrendingUp,
   FileEdit,
   CheckCircle2,
+  AlertTriangle,
+  X,
 } from "lucide-react";
 
 interface DashboardShift {
@@ -29,11 +33,20 @@ interface DashboardShift {
   workers_needed: number;
   slots_filled: number;
   status: string;
+  applicants?: { pending_count: number; backup_count: number };
+}
+
+interface CancellationAlert {
+  id: string;
+  title: string;
+  body: string | null;
+  created_at: string;
 }
 
 interface DashboardData {
   today: DashboardShift[];
   upcoming: DashboardShift[];
+  cancellation_alerts: CancellationAlert[];
   counts: {
     draft: number;
     published: number;
@@ -88,7 +101,7 @@ function ShiftRow({ shift }: { shift: DashboardShift }) {
   return (
     <Link
       href={`/manage-shifts/${shift.id}/attendance`}
-      className="block p-4 rounded-xl bg-surface border border-border hover:border-primary/30 hover:shadow-card-hover transition-all"
+      className="block p-4 rounded-2xl bg-surface border border-border hover:border-primary/30 hover:shadow-card-hover active:scale-[0.99] transition-all duration-150"
     >
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0">
@@ -129,6 +142,23 @@ function ShiftRow({ shift }: { shift: DashboardShift }) {
           />
         </div>
       )}
+
+      {(shift.applicants?.pending_count || shift.applicants?.backup_count) ? (
+        <div className="flex items-center gap-2 mt-2">
+          {!!shift.applicants?.pending_count && (
+            <Badge variant="warning">
+              {shift.applicants.pending_count}{" "}
+              {shift.applicants.pending_count === 1 ? t("applicants.pending_one") : t("applicants.pending_many")}
+            </Badge>
+          )}
+          {!!shift.applicants?.backup_count && (
+            <Badge variant="info">
+              {shift.applicants.backup_count}{" "}
+              {shift.applicants.backup_count === 1 ? t("applicants.backup_count_one") : t("applicants.backup_count_many")}
+            </Badge>
+          )}
+        </div>
+      ) : null}
     </Link>
   );
 }
@@ -145,15 +175,15 @@ function StatCard({
   accent: string;
 }) {
   return (
-    <div className="bg-surface rounded-xl border border-border p-4 shadow-card">
+    <Card className="p-4" interactive>
       <div className="flex items-center justify-between mb-2">
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${accent}`}>
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${accent}`}>
           {icon}
         </div>
       </div>
-      <div className="text-2xl font-bold text-foreground">{value}</div>
+      <div className="text-2xl font-bold text-foreground tabular-nums">{value}</div>
       <div className="text-sm text-foreground-secondary">{label}</div>
-    </div>
+    </Card>
   );
 }
 
@@ -175,8 +205,24 @@ export default function DashboardPage() {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-6 max-w-4xl">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-32" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+          <Skeleton className="h-10 w-28 rounded-xl" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="p-4 space-y-3">
+              <Skeleton className="h-9 w-9 rounded-xl" />
+              <Skeleton className="h-6 w-10" />
+              <Skeleton className="h-3 w-16" />
+            </Card>
+          ))}
+        </div>
+        <ShiftListSkeleton rows={2} />
       </div>
     );
 
@@ -185,8 +231,46 @@ export default function DashboardPage() {
       <p className="text-center py-8 text-danger">{t("error.generic")}</p>
     );
 
+  async function dismissAlert(id: string) {
+    if (!token) return;
+    setData((prev) =>
+      prev ? { ...prev, cancellation_alerts: prev.cancellation_alerts.filter((a) => a.id !== id) } : prev
+    );
+    try {
+      await fetch(`/api/notifications/${id}/read`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch { /* ignore */ }
+  }
+
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl animate-fade-in">
+      {/* Cancellation alerts */}
+      {data.cancellation_alerts.length > 0 && (
+        <div className="space-y-2">
+          {data.cancellation_alerts.map((alert) => (
+            <div
+              key={alert.id}
+              className="animate-pop-in flex items-start gap-3 p-3 rounded-xl bg-danger/10 border border-danger/30"
+            >
+              <AlertTriangle className="h-5 w-5 text-danger shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-foreground text-sm">{alert.title}</p>
+                {alert.body && <p className="text-sm text-foreground-secondary mt-0.5">{alert.body}</p>}
+              </div>
+              <button
+                onClick={() => dismissAlert(alert.id)}
+                className="rounded-full p-1 text-foreground-tertiary transition-all duration-150 hover:bg-danger/10 hover:text-foreground-secondary active:scale-90"
+                aria-label={t("general.close")}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -203,7 +287,7 @@ export default function DashboardPage() {
         </div>
         <Link
           href="/manage-shifts/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl hover:bg-primary-hover text-sm font-medium shadow-sm transition-all"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl hover:bg-primary-hover text-sm font-medium shadow-sm transition-all duration-150 active:scale-[0.97]"
         >
           <Plus className="h-4 w-4" />
           {t("shift.create")}
@@ -244,8 +328,10 @@ export default function DashboardPage() {
           {t("dashboard.today")}
         </h2>
         {data.today.length === 0 ? (
-          <div className="text-center py-10 bg-surface rounded-xl border border-border">
-            <CalendarDays className="h-10 w-10 text-foreground-tertiary mx-auto mb-2" />
+          <div className="flex flex-col items-center gap-2 text-center py-10 bg-surface rounded-2xl border border-border">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background">
+              <CalendarDays className="h-5 w-5 text-foreground-tertiary" />
+            </div>
             <p className="text-foreground-secondary text-sm">{t("dashboard.no_today")}</p>
           </div>
         ) : (
@@ -263,8 +349,10 @@ export default function DashboardPage() {
           {t("dashboard.upcoming")}
         </h2>
         {data.upcoming.length === 0 ? (
-          <div className="text-center py-10 bg-surface rounded-xl border border-border">
-            <CalendarDays className="h-10 w-10 text-foreground-tertiary mx-auto mb-2" />
+          <div className="flex flex-col items-center gap-2 text-center py-10 bg-surface rounded-2xl border border-border">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background">
+              <CalendarDays className="h-5 w-5 text-foreground-tertiary" />
+            </div>
             <p className="text-foreground-secondary text-sm">
               {t("dashboard.no_upcoming")}
             </p>

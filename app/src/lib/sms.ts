@@ -57,12 +57,17 @@ async function sendViaGreenApi(phone: string, message: string): Promise<SMSResul
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      console.error(`[GREEN-API] HTTP ${res.status}: ${text}`);
+      console.error(`[GREEN-API] send failed phone=${normalized} HTTP ${res.status}: ${text}`);
       return { success: false, error: `Green-API HTTP ${res.status}` };
     }
 
     const data = await res.json();
-    return { success: true, messageId: data.idMessage || String(Date.now()) };
+    if (!data.idMessage) {
+      console.error(`[GREEN-API] send returned no idMessage phone=${normalized} response=${JSON.stringify(data)}`);
+      return { success: false, error: "Green-API did not return a message id" };
+    }
+    console.log(`[GREEN-API] send ok phone=${normalized} idMessage=${data.idMessage}`);
+    return { success: true, messageId: data.idMessage };
   } catch (err) {
     console.error("[GREEN-API] Request failed:", err);
     return { success: false, error: "Green-API request failed" };
