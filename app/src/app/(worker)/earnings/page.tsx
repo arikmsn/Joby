@@ -6,6 +6,7 @@ import { t } from "@/lib/i18n/he";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Briefcase, Clock, Wallet } from "lucide-react";
 
 type Range = "today" | "week" | "month";
@@ -81,7 +82,7 @@ export default function EarningsPage() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <h1 className="text-xl font-bold text-foreground">{t("earnings.title")}</h1>
+      <h1 className="text-xl font-extrabold text-foreground tracking-tight">{t("earnings.title")}</h1>
 
       <SegmentedControl
         value={range}
@@ -94,7 +95,31 @@ export default function EarningsPage() {
       />
 
       {loading || !data ? (
-        <p className="text-center py-8 text-foreground-tertiary">{t("general.loading")}</p>
+        <div className="space-y-4 animate-fade-in">
+          <div className="grid grid-cols-3 gap-2.5">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i} className="p-4">
+                <Skeleton className="h-9 w-9 rounded-xl mb-2" />
+                <Skeleton className="h-6 w-12 mb-1.5" />
+                <Skeleton className="h-3 w-16" />
+              </Card>
+            ))}
+          </div>
+          <Card>
+            <CardContent className="pt-6 space-y-3">
+              <Skeleton className="h-4 w-28 mb-1" />
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="border border-border rounded-xl p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                  <Skeleton className="h-3 w-40" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
       ) : (
         <>
           <div className="grid grid-cols-3 gap-2.5">

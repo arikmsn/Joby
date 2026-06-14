@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { t } from "@/lib/i18n/he";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Config } from "@/lib/constants";
 import { QrCode, CheckCircle2, XCircle, ScanLine, Clock } from "lucide-react";
@@ -103,14 +104,14 @@ export default function ScanPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-foreground">
+      <h1 className="text-xl font-extrabold text-foreground tracking-tight">
         {shift ? t("qr.scan_for_shift") : t("qr.scan_title")}
       </h1>
 
       {shift && (
-        <div className="rounded-xl border border-border bg-surface p-3">
+        <Card className="p-3">
           <p className="font-medium text-foreground">{shift.title}</p>
-        </div>
+        </Card>
       )}
 
       {result ? (

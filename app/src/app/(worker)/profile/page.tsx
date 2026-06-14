@@ -199,7 +199,7 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <h1 className="text-xl font-bold text-foreground">{t("nav.profile")}</h1>
+      <h1 className="text-xl font-extrabold text-foreground tracking-tight">{t("nav.profile")}</h1>
 
       <Card>
         <div className="flex items-center gap-4 mb-4">
@@ -210,7 +210,7 @@ export default function ProfilePage() {
             <h2 className="text-lg font-semibold text-foreground truncate">
               {user.full_name}
             </h2>
-            <p className="text-sm text-foreground-secondary" dir="ltr">
+            <p className="text-sm text-foreground-secondary text-right" dir="ltr">
               {user.phone}
             </p>
           </div>

@@ -244,7 +244,7 @@ export default function ShiftDetailsPage() {
 
         <div className="flex items-end justify-between pt-3 border-t border-border-light">
           <div>
-            <div className="text-3xl font-bold text-foreground" dir="ltr">
+            <div className="text-3xl font-bold text-foreground text-right" dir="ltr">
               {t("general.currency")}{formatPay(shift.pay_rate)}
             </div>
             <div className="text-sm text-foreground-tertiary mt-0.5">

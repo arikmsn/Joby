@@ -46,7 +46,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-foreground">{t("nav.notifications")}</h1>
+      <h1 className="text-xl font-extrabold text-foreground tracking-tight">{t("nav.notifications")}</h1>
 
       {loading ? (
         <div className="rounded-2xl border border-border bg-surface overflow-hidden divide-y divide-border-light">
