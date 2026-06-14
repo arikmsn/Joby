@@ -10,7 +10,7 @@ import { useDocumentTitle } from "@/lib/use-document-title";
 import { t } from "@/lib/i18n/he";
 import Link from "next/link";
 import { Building2, User } from "lucide-react";
-import { JobyMark } from "@/components/ui/joby-mark";
+import { JobyLogo } from "@/components/ui/joby-logo";
 import { roleHomePath, type AuthRole } from "@/lib/auth-routes";
 
 export function RegisterForm({ forcedRole }: { forcedRole?: AuthRole }) {
@@ -117,7 +117,7 @@ function RegisterFormInner({ forcedRole }: { forcedRole?: AuthRole }) {
       <div className="space-y-8">
         <div className="text-center">
           <div className="inline-flex items-center justify-center mb-4">
-            <JobyMark className="h-14 w-14" />
+            <JobyLogo size={64} className="h-16 w-16" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">
             {t("auth.register")}

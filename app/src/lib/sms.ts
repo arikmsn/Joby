@@ -82,14 +82,7 @@ export async function sendSMS(phone: string, message: string): Promise<SMSResult
   }
 
   if (provider === "greenapi_whatsapp") {
-    const result = await sendViaGreenApi(phone, message);
-
-    if (!result.success && process.env.OTP_ALLOW_DEV_FALLBACK === "true") {
-      console.warn("[OTP] Green-API failed, falling back to mock (OTP_ALLOW_DEV_FALLBACK=true)");
-      return sendViaMock(phone, message);
-    }
-
-    return result;
+    return sendViaGreenApi(phone, message);
   }
 
   console.error(`[OTP] Unknown provider: ${provider}`);

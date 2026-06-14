@@ -41,27 +41,34 @@ export function BottomNavLink({ href, icon, label, badge }: NavLinkProps & { bad
   return (
     <Link
       href={href}
-      className="relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] transition-transform duration-150 active:scale-[0.94]"
+      className="relative flex flex-1 flex-col items-center gap-1 py-2 text-[11px] transition-transform duration-150 active:scale-[0.92]"
     >
-      {isActive && (
-        <motion.span
-          layoutId="bottom-nav-active-pill"
-          className="absolute top-1 h-8 w-12 rounded-full bg-primary/10"
-          transition={{ type: "spring", duration: 0.4, bounce: 0.2 }}
-        />
-      )}
-      <span className={cn("relative transition-colors duration-200", isActive ? "text-primary" : "text-foreground-tertiary")}>
-        {icon}
-        {!!badge && badge > 0 && (
-          <span className="absolute -top-1 -end-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-success px-1 text-[10px] font-bold leading-none text-white animate-pop-in">
-            {badge > 9 ? "9+" : badge}
-          </span>
+      <span className="relative flex h-9 w-12 items-center justify-center">
+        {isActive && (
+          <motion.span
+            layoutId="bottom-nav-active-pill"
+            className="absolute inset-0 rounded-2xl bg-primary"
+            transition={{ type: "spring", duration: 0.4, bounce: 0.25 }}
+          />
         )}
+        <span
+          className={cn(
+            "relative transition-all duration-200",
+            isActive ? "text-white scale-105" : "text-foreground-tertiary"
+          )}
+        >
+          {icon}
+          {!!badge && badge > 0 && (
+            <span className="absolute -top-1.5 -end-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold leading-none text-white ring-2 ring-surface animate-pop-in">
+              {badge > 9 ? "9+" : badge}
+            </span>
+          )}
+        </span>
       </span>
       <span
         className={cn(
           "relative transition-colors duration-200",
-          isActive ? "text-primary font-semibold" : "text-foreground-tertiary"
+          isActive ? "text-secondary font-bold" : "text-foreground-tertiary font-medium"
         )}
       >
         {label}

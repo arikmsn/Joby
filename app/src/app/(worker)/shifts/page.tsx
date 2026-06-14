@@ -6,6 +6,8 @@ import { useOccupations } from "@/lib/use-occupations";
 import { t } from "@/lib/i18n/he";
 import { Badge } from "@/components/ui/badge";
 import { EmployerAvatar } from "@/components/ui/employer-avatar";
+import { TrustBadge } from "@/components/ui/trust-badge";
+import { JobyLogo } from "@/components/ui/joby-logo";
 import Link from "next/link";
 import type { WorkerProfile } from "@/lib/types";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
@@ -22,9 +24,7 @@ import {
   CalendarClock,
   Zap,
   Sparkles,
-  Briefcase,
   Wand2,
-  Wallet,
   Pencil,
 } from "lucide-react";
 
@@ -179,6 +179,18 @@ export default function WorkerShiftFeed() {
 
   const displayedShifts = activeTab === "matched" ? matchedShifts : visibleShifts;
 
+  // Rough weekly earning potential, based on the best-matching upcoming opportunities
+  const earningPotential = useMemo(() => {
+    const pool = (hasPreferences ? matchedShifts : visibleShifts).slice(0, 5);
+    return pool.reduce((sum, s) => {
+      if (s.pay_type === "hourly") {
+        const hours = (new Date(s.end_at).getTime() - new Date(s.start_at).getTime()) / 3600000;
+        return sum + Number(s.pay_rate) * Math.max(hours, 0);
+      }
+      return sum + Number(s.pay_rate);
+    }, 0);
+  }, [hasPreferences, matchedShifts, visibleShifts]);
+
   const activeFilterCount = roleFilters.length + [cityFilter, dateFilter].filter(Boolean).length;
 
   const sortedOccupations = useMemo(
@@ -246,13 +258,42 @@ export default function WorkerShiftFeed() {
   function ShiftRow({ shift }: { shift: FeedShift }) {
     const spotsLeft = shift.workers_needed - shift.slots_filled;
     const soon = isStartingSoon(shift.start_at);
-    const showMeta = shift.has_sos || soon || spotsLeft <= 1;
+
+    const matchCount = (roleMatches(shift) ? 1 : 0) + (cityMatches(shift) ? 1 : 0) + (payMatches(shift) ? 1 : 0);
+    const matchScore = hasPreferences ? Math.round((matchCount / 3) * 100) : 0;
+    const recommended = hasPreferences && matchCount >= 2;
 
     return (
       <Link
         href={`/shifts/${shift.id}`}
-        className="block px-4 py-3.5 transition-colors duration-150 hover:bg-background/60 active:bg-border-light"
+        className="block rounded-2xl border border-border bg-surface p-4 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card-hover active:scale-[0.99] animate-card-pop"
       >
+        {/* Badges */}
+        <div className="flex items-center gap-1.5 flex-wrap mb-2.5 empty:mb-0">
+          {shift.has_sos && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-danger px-2.5 py-0.5 text-xs font-bold text-white">
+              <AlertTriangle className="h-3 w-3" />
+              {t("sos.badge")}
+            </span>
+          )}
+          {!shift.has_sos && soon && (
+            <Badge variant="warning">
+              <Zap className="h-3 w-3" />
+              {t("feed.badge_immediate")}
+            </Badge>
+          )}
+          {recommended && (
+            <Badge className="bg-accent-light text-accent border border-accent/20">
+              <Sparkles className="h-3 w-3" />
+              {t("feed.badge_recommended")}
+            </Badge>
+          )}
+          {spotsLeft === 1 && (
+            <Badge variant="warning">{t("feed.badge_urgent")}</Badge>
+          )}
+          {shift.my_application && appliedBadge(shift.my_application)}
+        </div>
+
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
             <EmployerAvatar name={shift.business_name || shift.title} />
@@ -260,7 +301,7 @@ export default function WorkerShiftFeed() {
               <p className="text-xs font-medium text-foreground-secondary truncate">
                 {shift.business_name}
               </p>
-              <h3 className="font-semibold text-foreground truncate leading-snug">{shift.title}</h3>
+              <h3 className="font-bold text-foreground truncate leading-snug">{shift.title}</h3>
               <Badge variant="secondary" className="mt-1">
                 {occupationLabel(shift.role_tag)}
               </Badge>
@@ -278,7 +319,7 @@ export default function WorkerShiftFeed() {
           </div>
 
           <div className="shrink-0 text-left">
-            <div className="text-lg font-bold text-primary" dir="ltr">
+            <div className="text-xl font-extrabold text-primary font-numeric tabular-nums" dir="ltr">
               {t("general.currency")}{formatPay(shift.pay_rate)}
             </div>
             <div className="text-[11px] text-foreground-tertiary text-right">
@@ -287,66 +328,33 @@ export default function WorkerShiftFeed() {
           </div>
         </div>
 
-        {shift.my_application && (
-          <div className="mt-2">{appliedBadge(shift.my_application)}</div>
-        )}
-
-        {activeTab === "matched" && hasPreferences && (() => {
-          const reasons: { key: string; icon: React.ReactNode; label: string }[] = [];
-          if (roleMatches(shift)) {
-            reasons.push({ key: "role", icon: <Briefcase className="h-3 w-3" />, label: t("feed.match_role") });
-          }
-          if (cityMatches(shift)) {
-            reasons.push({ key: "city", icon: <MapPin className="h-3 w-3" />, label: t("feed.match_city") });
-          }
-          if (payMatches(shift)) {
-            reasons.push({ key: "pay", icon: <Wallet className="h-3 w-3" />, label: t("feed.match_pay") });
-          }
-          if (reasons.length === 0) return null;
-          return (
-            <div className="flex items-center gap-2 flex-wrap mt-2">
-              {reasons.slice(0, 3).map((r) => (
-                <span
-                  key={r.key}
-                  className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
-                >
-                  {r.icon}
-                  {r.label}
-                </span>
-              ))}
+        {/* Match score */}
+        {matchScore > 0 && (
+          <div className="mt-3 flex items-center gap-2">
+            <div className="flex-1 h-1.5 rounded-full bg-border-light overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-l from-primary to-primary-400"
+                style={{ width: `${matchScore}%` }}
+              />
             </div>
-          );
-        })()}
-
-        {showMeta && (
-          <div className="flex items-center gap-3 flex-wrap mt-2">
-            {shift.has_sos && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-danger px-2.5 py-0.5 text-xs font-bold text-white">
-                <AlertTriangle className="h-3 w-3" />
-                {t("sos.badge")}
-              </span>
-            )}
-            {!shift.has_sos && soon && (
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-warning">
-                <span className="h-1.5 w-1.5 rounded-full bg-warning" />
-                {t("feed.starting_soon")}
-              </span>
-            )}
-            <span
-              className={`inline-flex items-center gap-1.5 text-xs font-medium ${
-                spotsLeft <= 1 ? "text-warning" : "text-foreground-tertiary"
-              }`}
-            >
-              {spotsLeft > 1 && <span className="h-1.5 w-1.5 rounded-full bg-foreground-tertiary" />}
-              {spotsLeft <= 1 && <span className="h-1.5 w-1.5 rounded-full bg-warning" />}
-              {spotsLeft <= 0
-                ? t("feed.full")
-                : spotsLeft === 1
-                  ? t("feed.spots_left_one")
-                  : `${spotsLeft} ${t("feed.spots_left")}`}
+            <span className="text-xs font-semibold text-primary shrink-0">
+              {matchScore}% {t("feed.match_score")}
             </span>
           </div>
         )}
+
+        {/* Spots left */}
+        {spotsLeft >= 0 && spotsLeft !== 1 && (
+          <div className="mt-2.5 flex items-center gap-1.5 text-xs font-medium text-foreground-tertiary">
+            <span className={`h-1.5 w-1.5 rounded-full ${spotsLeft === 0 ? "bg-foreground-tertiary" : "bg-success"}`} />
+            {spotsLeft === 0 ? t("feed.full") : `${spotsLeft} ${t("feed.spots_left")}`}
+          </div>
+        )}
+
+        {/* CTA */}
+        <div className="mt-3 rounded-xl bg-primary/8 text-primary text-sm font-bold text-center py-2.5 transition-colors group-hover:bg-primary/15">
+          {t("feed.cta_view_opportunity")}
+        </div>
       </Link>
     );
   }
@@ -355,7 +363,7 @@ export default function WorkerShiftFeed() {
     return (
       <div className="flex items-center gap-2 px-1 mb-2">
         {icon}
-        <h2 className="text-sm font-semibold text-foreground">{label}</h2>
+        <h2 className="text-sm font-bold text-foreground">{label}</h2>
         <span className="text-xs text-foreground-tertiary">{count}</span>
       </div>
     );
@@ -363,7 +371,7 @@ export default function WorkerShiftFeed() {
 
   function Section({ shifts: list }: { shifts: FeedShift[] }) {
     return (
-      <div className="rounded-2xl border border-border bg-surface overflow-hidden divide-y divide-border-light animate-card-pop">
+      <div className="space-y-3">
         {list.map((s) => (
           <ShiftRow key={s.id} shift={s} />
         ))}
@@ -377,22 +385,47 @@ export default function WorkerShiftFeed() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="pt-1 space-y-1">
-        <p className="text-sm text-foreground-secondary">
-          {t("feed.greeting")}{firstName ? `, ${firstName}` : ""}
-        </p>
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">
-          {t("feed.subtitle")}
-        </h1>
-        {!loading && hasAnyResults && (
-          <p className="text-sm text-foreground-tertiary pt-0.5">
-            {displayedShifts.length} {t("feed.title")}
+      {/* Hero */}
+      <div className="hero-glow rounded-3xl p-5 text-white shadow-float -mx-1 animate-card-pop">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm text-white/65">
+              {t("feed.hero_greeting")}{firstName ? `, ${firstName}` : ""}
+            </p>
+            <h1 className="text-2xl font-extrabold tracking-tight mt-0.5 text-balance">
+              {t("feed.hero_subtitle")}
+            </h1>
+          </div>
+          <JobyLogo size={36} className="h-9 w-9 shrink-0 ring-2 ring-white/15" />
+        </div>
+
+        {!loading && matchedShifts.length > 0 && (
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold">
+            <Sparkles className="h-4 w-4 text-primary" />
+            {matchedShifts.length}{" "}
+            {matchedShifts.length === 1 ? t("feed.hero_opportunities_one") : t("feed.hero_opportunities_many")}
             {urgent.length > 0 && (
-              <span className="text-danger font-medium"> · {urgent.length} {t("feed.section_urgent")}</span>
+              <span className="text-warning"> · {urgent.length} {t("feed.section_urgent")}</span>
             )}
-          </p>
+          </div>
         )}
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-white/10 p-3">
+            <p className="text-xs text-white/60">{t("feed.hero_earning_potential")}</p>
+            <p className="text-xl font-extrabold font-numeric tabular-nums mt-0.5" dir="ltr">
+              {t("general.currency")}{formatPay(earningPotential)}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-white/10 p-3">
+            <p className="text-xs text-white/60 mb-1">{t("feed.hero_rating")}</p>
+            <TrustBadge
+              score={workerProfile?.trust_score ?? null}
+              totalShifts={workerProfile?.total_shifts ?? 0}
+              size="md"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Contextual summary of saved preferences */}

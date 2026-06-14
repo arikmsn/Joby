@@ -215,6 +215,23 @@ export const employerWorkerRelations = pgTable("employer_worker_relations", {
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
+// --- Worker Invites (employer invites a phone number not yet on Joby) ---
+export const workerInvites = pgTable("worker_invites", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  employer_id: uuid("employer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  invited_by_user_id: uuid("invited_by_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  invited_phone: varchar("invited_phone", { length: 20 }).notNull(),
+  normalized_phone: varchar("normalized_phone", { length: 20 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("PENDING"),
+  sent_at: timestamp("sent_at", { withTimezone: true }).defaultNow(),
+  joined_at: timestamp("joined_at", { withTimezone: true }),
+  message_provider: varchar("message_provider", { length: 50 }),
+  provider_message_id: varchar("provider_message_id", { length: 100 }),
+  last_error: text("last_error"),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
 // --- Notifications ---
 export const notifications = pgTable("notifications", {
   id: uuid("id").primaryKey().defaultRandom(),

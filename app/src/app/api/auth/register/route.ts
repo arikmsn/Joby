@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { registerSchema } from "@/lib/validators";
 import { signToken } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { users, employerProfiles, workerProfiles } from "@/lib/schema";
-import { eq } from "drizzle-orm";
+import { users, employerProfiles, workerProfiles, workerInvites } from "@/lib/schema";
+import { eq, and, sql } from "drizzle-orm";
 import { UserRole, Config } from "@/lib/constants";
 import { t } from "@/lib/i18n/he";
+import { normalizePhone } from "@/lib/phone";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
@@ -117,6 +118,13 @@ export async function POST(req: NextRequest) {
       { error: "DB_ERROR", message: t("error.generic") },
       { status: 500 }
     );
+  }
+
+  if (data.role === UserRole.WORKER) {
+    await db
+      .update(workerInvites)
+      .set({ status: "JOINED", joined_at: sql`now()`, updated_at: sql`now()` })
+      .where(and(eq(workerInvites.normalized_phone, normalizePhone(phone)), eq(workerInvites.status, "PENDING")));
   }
 
   const token = await signToken({

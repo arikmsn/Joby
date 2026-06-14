@@ -16,7 +16,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { NavLink } from "./nav-link";
 import { RoleMismatchBanner } from "./role-mismatch-banner";
-import { JobyMark } from "@/components/ui/joby-mark";
+import { JobyLogo } from "@/components/ui/joby-logo";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useAuth } from "@/lib/auth-context";
 import { t } from "@/lib/i18n/he";
@@ -34,8 +34,8 @@ export function EmployerLayout({ children }: { children: ReactNode }) {
       <aside className="hidden md:flex md:w-64 md:flex-col border-l border-border bg-surface">
         <div className="p-5 border-b border-border">
           <div className="flex items-center gap-2">
-            <JobyMark className="h-6 w-6" />
-            <h1 className="text-xl font-bold text-primary">
+            <JobyLogo size={28} className="h-7 w-7" />
+            <h1 className="text-xl font-bold text-secondary">
               {t("app.name")}
             </h1>
           </div>
@@ -110,8 +110,8 @@ export function EmployerLayout({ children }: { children: ReactNode }) {
                 </motion.span>
               </button>
               <div className="flex items-center gap-2">
-                <JobyMark className="h-6 w-6" />
-                <h1 className="text-lg font-bold text-primary">
+                <JobyLogo size={26} className="h-[26px] w-[26px]" />
+                <h1 className="text-lg font-bold text-secondary">
                   {t("app.name")}
                 </h1>
               </div>

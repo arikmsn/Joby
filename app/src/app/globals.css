@@ -2,27 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 
 :root {
-  --background: #f8f7f4;
+  --background: #f8fafc;
   --surface: #ffffff;
-  --foreground: #1a1a1a;
-  --foreground-secondary: #6b7280;
-  --foreground-tertiary: #9ca3af;
-  --border: #e8e5e0;
-  --border-light: #f0ede8;
-  --ring: #0d9488;
-  --radius: 0.75rem;
+  --foreground: #0f172a;
+  --foreground-secondary: #64748b;
+  --foreground-tertiary: #94a3b8;
+  --border: #e6ebf1;
+  --border-light: #eff3f7;
+  --ring: #00c9a7;
+  --radius: 0.875rem;
 
-  --primary: #0d9488;
-  --primary-hover: #0f766e;
-  --primary-light: #ccfbf1;
+  --primary: #00c9a7;
+  --primary-hover: #00b395;
+  --primary-light: #d4faf2;
   --primary-foreground: #ffffff;
 
-  --success: #16a34a;
+  --secondary: #0f172a;
+  --secondary-hover: #1e293b;
+  --secondary-light: #e2e8f0;
+  --secondary-foreground: #ffffff;
+
+  --accent: #7c3aed;
+  --accent-light: #f1e8fd;
+
+  --success: #22c55e;
   --success-light: #dcfce7;
-  --warning: #d97706;
+  --warning: #f59e0b;
   --warning-light: #fef3c7;
   --danger: #dc2626;
   --danger-light: #fee2e2;
@@ -38,7 +46,7 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Rubik', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Heebo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -50,7 +58,12 @@ input, textarea, select {
 input[type="tel"],
 input[type="number"],
 input[dir="ltr"] {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+.tabular-nums,
+.font-numeric {
+  font-family: 'Plus Jakarta Sans', 'Heebo', system-ui, sans-serif;
 }
 
 @layer utilities {
@@ -63,7 +76,13 @@ input[dir="ltr"] {
   }
 
   .hero-gradient {
-    background: linear-gradient(160deg, #0f766e 0%, #134e4a 100%);
+    background: linear-gradient(160deg, #0f172a 0%, #1e293b 55%, #0a6e60 100%);
+  }
+
+  .hero-glow {
+    background:
+      radial-gradient(ellipse 120% 80% at 100% 0%, rgba(0, 201, 167, 0.35) 0%, transparent 60%),
+      linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
   }
 
   .approved-glow {

@@ -77,7 +77,7 @@ const he = {
   "nav.employers": "מעסיקים",
   "nav.workers": "עובדים",
   "nav.catalog": "קטלוג תחומים",
-  "nav.known_workers": "עובדים מוכרים",
+  "nav.known_workers": "עובדים",
   "nav.reports": "דוחות",
   "nav.earnings": "הכנסות",
 
@@ -185,6 +185,20 @@ const he = {
   "feed.summary_min_pay": "משכורת מינימום",
   "feed.summary_edit": "עריכה",
 
+  // Hero / opportunity language (home screen)
+  "feed.hero_greeting": "שלום",
+  "feed.hero_subtitle": "מצאנו עבורך הזדמנויות חדשות",
+  "feed.hero_opportunities_one": "הזדמנות חדשה מתאימה לך",
+  "feed.hero_opportunities_many": "הזדמנויות חדשות מתאימות לך",
+  "feed.hero_earning_potential": "פוטנציאל הכנסה השבוע",
+  "feed.hero_rating": "אמינות",
+  "feed.hero_shifts_done": "משמרות שהושלמו",
+  "feed.badge_recommended": "מומלץ עבורך",
+  "feed.badge_urgent": "מבוקש",
+  "feed.badge_immediate": "מיידי",
+  "feed.match_score": "התאמה",
+  "feed.cta_view_opportunity": "לפרטים והגשת מועמדות",
+
   // Applications
   "application.apply": "הגש מועמדות",
   "application.approve": "אשר",
@@ -273,6 +287,17 @@ const he = {
 
   // Admin - Workers
   "admin.workers.create": "הוסף עובד",
+  "admin.workers.status_registered": "רשום",
+  "admin.workers.status_joined": "הצטרף מהזמנה",
+  "admin.workers.status_invited": "הוזמן",
+  "admin.workers.status_failed": "שליחה נכשלה",
+  "admin.workers.source_direct": "הרשמה עצמאית",
+  "admin.workers.source_employer_invite": "הזמנת מעסיק",
+  "admin.workers.invited_by": "הוזמן על ידי",
+  "admin.workers.invite_sent_at": "נשלחה הזמנה ב-{date}",
+  "admin.workers.joined_at": "נרשם ב-{date}",
+  "admin.workers.invite_count_extra": "+{count} מעסיקים נוספים",
+  "admin.workers.no_name": "ללא שם (לא נרשם)",
 
   // Admin - Shifts
   "admin.shifts.employer": "מעסיק",
@@ -350,6 +375,7 @@ const he = {
   "applicants.inactive_title": "מועמדים לא פעילים",
 
   "my_shifts.title": "המשמרות שלי",
+  "my_shifts.subtitle": "כל המשמרות שלך במקום אחד — מאושרות, ממתינות ועברו",
   "my_shifts.tab_pending": "ממתינות",
   "my_shifts.tab_approved": "מאושרות",
   "my_shifts.tab_history": "היסטוריה",
@@ -513,9 +539,9 @@ const he = {
   "onboarding.incomplete_preferences": "עדיין לא הגדרת שכר מינימום ושפות — נוסיף אותם להתאמה מדויקת יותר",
   "onboarding.preview_title": "כמה משמרות שכבר מתאימות לך",
 
-  // --- Known Workers (Sprint 6) ---
-  "known_workers.title": "עובדים מוכרים",
-  "known_workers.subtitle": "עובדים שעבדו אצלך בעבר",
+  // --- Known Workers / Workers (Sprint 6 + Workers evolution) ---
+  "known_workers.title": "עובדים",
+  "known_workers.subtitle": "חפש עובדים קיימים או הזמן עובדים להצטרף ל-Joby",
   "known_workers.worked_before": "עבד אצלך בעבר",
   "known_workers.worked_times_one": "עבד אצלך פעם אחת",
   "known_workers.worked_times": "עבד אצלך {count} פעמים",
@@ -529,13 +555,30 @@ const he = {
   "known_workers.no_shifts_to_invite": "אין משמרות פתוחות להזמנה כרגע",
   "known_workers.invite_sent": "ההזמנה נשלחה בהצלחה",
   "known_workers.invite_send": "שלח הזמנה",
-  "known_workers.empty": "עדיין לא עבדו עובדים אצלך",
-  "known_workers.empty_sub": "עובדים שמסיימים משמרת אצלך יופיעו כאן",
-  "known_workers.search_phone_title": "הזמנת עובד לפי מספר טלפון",
+  "known_workers.empty": "עדיין אין לך עובדים מחוברים",
+  "known_workers.empty_sub": "חפש עובד לפי מספר טלפון או הזמן עובדים שאתה מכיר מ-WhatsApp להצטרף ל-Joby",
+  "known_workers.search_phone_title": "חיפוש עובד לפי מספר טלפון",
   "known_workers.search_phone_placeholder": "050-1234567",
   "known_workers.search_button": "חפש",
   "known_workers.worker_not_found": "לא נמצא עובד עם מספר טלפון זה",
   "known_workers.trust_label": "אמינות",
+  "known_workers.connected_workers_title": "עובדים מחוברים",
+  "known_workers.connected": "מחובר כעובד",
+  "known_workers.add_to_workers": "הוסף לעובדים",
+  "known_workers.added_to_workers": "נוסף לעובדים שלך",
+  "known_workers.worker_already_exists": "העובד הזה כבר רשום ב-Joby",
+  "known_workers.not_found_title": "העובד עוד לא רשום ב-Joby",
+  "known_workers.not_found_sub": "אפשר להזמין אותו להצטרף ב-WhatsApp",
+  "known_workers.invite_whatsapp": "הזמן ב-WhatsApp",
+  "known_workers.invite_whatsapp_sent": "ההזמנה נשלחה ב-WhatsApp",
+  "known_workers.invite_whatsapp_failed": "שליחת ההזמנה נכשלה. נסה שוב",
+  "known_workers.pending_invites_title": "הזמנות שנשלחו",
+  "known_workers.pending_invites_empty": "לא נשלחו הזמנות עדיין",
+  "known_workers.status_pending": "הוזמן",
+  "known_workers.status_joined": "הצטרף",
+  "known_workers.status_failed": "שליחה נכשלה",
+  "known_workers.sent_at": "נשלח ב-{date}",
+  "known_workers.joined_at": "הצטרף ב-{date}",
 
   // --- Employer Reports (Sprint 6) ---
   "reports.title": "דוחות",
@@ -620,6 +663,9 @@ const he = {
   "employer_profile.description": "תיאור / סטייל העסק",
   "employer_profile.description_placeholder": "ספרו לעובדים קצת על העסק שלכם, האווירה והציפיות",
   "employer_profile.no_details": "עדיין לא הוספתם פרטים על העסק. לחצו על העיפרון כדי להתחיל.",
+
+  // --- Worker invite (WhatsApp) ---
+  "notification.worker_invite.whatsapp": "בעל העסק \"{employer}\" מזמין אותך להשתמש במערכת Joby כדי לנהל את המשמרות שלך. הירשם עכשיו וסגור משמרת עוד היום: https://joby-opal.vercel.app/login",
 } as const;
 
 export type TranslationKey = keyof typeof he;

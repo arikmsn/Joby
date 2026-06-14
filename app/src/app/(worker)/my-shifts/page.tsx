@@ -251,9 +251,14 @@ export default function MyShiftsPage() {
         />
       )}
 
-      <h1 className="text-xl font-bold text-foreground">
-        {t("my_shifts.title")}
-      </h1>
+      <div>
+        <h1 className="text-xl font-extrabold text-foreground tracking-tight">
+          {t("my_shifts.title")}
+        </h1>
+        <p className="text-sm text-foreground-secondary mt-0.5">
+          {t("my_shifts.subtitle")}
+        </p>
+      </div>
 
       {/* Tabs */}
       <SegmentedControl
@@ -298,16 +303,26 @@ export default function MyShiftsPage() {
               app.shift_contact_phone;
             const expanded = expandedId === app.id;
 
+            const accentColor =
+              tab === "approved"
+                ? "bg-primary"
+                : tab === "pending"
+                  ? "bg-warning"
+                  : ["RATED", "CHECKED_OUT"].includes(app.status)
+                    ? "bg-success"
+                    : "bg-foreground-tertiary";
+
             return (
               <div
                 key={app.id}
-                className={`animate-card-pop overflow-hidden rounded-2xl border transition-all ${
+                className={`animate-card-pop relative overflow-hidden rounded-2xl border transition-all ${
                   isConfirmedForWorker
                     ? "approved-glow border-primary/30 shadow-card"
-                    : "border-border bg-surface"
+                    : "border-border bg-surface shadow-card"
                 }`}
                 style={{ animationDelay: `${Math.min(i, 6) * 40}ms` }}
               >
+                <span className={`absolute inset-y-0 end-0 w-1 ${accentColor}`} />
                 <div className="p-4">
                   <div className="flex items-start gap-3">
                     <EmployerAvatar name={app.business_name || app.shift_title} />
@@ -335,7 +350,7 @@ export default function MyShiftsPage() {
                             {app.shift_city}
                           </span>
                         )}
-                        <span className="flex items-center gap-1 font-medium text-foreground">
+                        <span className="flex items-center gap-1 font-bold text-foreground font-numeric tabular-nums">
                           <Banknote className="h-3.5 w-3.5 text-primary" />
                           {t("general.currency")}
                           {formatPay(app.shift_pay_rate)}{" "}

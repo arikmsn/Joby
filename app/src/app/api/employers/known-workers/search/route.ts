@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { users, workerProfiles } from "@/lib/schema";
-import { eq, and } from "drizzle-orm";
+import { users, workerProfiles, employerWorkerRelations } from "@/lib/schema";
+import { eq, and, inArray } from "drizzle-orm";
 import { UserRole } from "@/lib/constants";
 import { workerSearchByPhoneSchema } from "@/lib/validators";
 import { t } from "@/lib/i18n/he";
+import { phoneVariants } from "@/lib/phone";
 
 // GET /api/employers/known-workers/search?phone=... — find an existing worker by phone for invite
 export async function GET(req: NextRequest) {
   const userOrRes = await requireRole(req, UserRole.EMPLOYER);
   if (userOrRes instanceof NextResponse) return userOrRes;
+  const user = userOrRes;
 
   const phone = req.nextUrl.searchParams.get("phone") || "";
   const parsed = workerSearchByPhoneSchema.safeParse({ phone });
@@ -20,6 +22,8 @@ export async function GET(req: NextRequest) {
       { status: 400 }
     );
   }
+
+  const variants = phoneVariants(parsed.data.phone);
 
   const rows = await db
     .select({
@@ -32,12 +36,20 @@ export async function GET(req: NextRequest) {
     })
     .from(users)
     .leftJoin(workerProfiles, eq(users.id, workerProfiles.user_id))
-    .where(and(eq(users.phone, parsed.data.phone), eq(users.role, UserRole.WORKER)))
+    .where(and(inArray(users.phone, variants), eq(users.role, UserRole.WORKER)))
     .limit(1);
 
   if (rows.length === 0) {
     return NextResponse.json({ worker: null });
   }
 
-  return NextResponse.json({ worker: rows[0] });
+  const worker = rows[0];
+
+  const relationRows = await db
+    .select({ id: employerWorkerRelations.id })
+    .from(employerWorkerRelations)
+    .where(and(eq(employerWorkerRelations.employer_id, user.id), eq(employerWorkerRelations.worker_id, worker.id)))
+    .limit(1);
+
+  return NextResponse.json({ worker: { ...worker, connected: relationRows.length > 0 } });
 }

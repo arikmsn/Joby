@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { users, workerProfiles } from "@/lib/schema";
+import { users, workerProfiles, employerProfiles, workerInvites } from "@/lib/schema";
 import { requireRole } from "@/lib/auth";
 import { adminCreateWorkerSchema, adminListQuerySchema } from "@/lib/validators";
 import { UserRole, Config } from "@/lib/constants";
 import { eq, or, ilike, and, sql, desc } from "drizzle-orm";
 import { t } from "@/lib/i18n/he";
+import { normalizePhone } from "@/lib/phone";
 
-// GET /api/admin/workers — list/search workers (admin only)
+// GET /api/admin/workers — unified workforce list: registered workers + employer-invited phones
+// that have not signed up yet (admin only)
 export async function GET(req: NextRequest) {
   const admin = await requireRole(req, UserRole.ADMIN);
   if (admin instanceof NextResponse) return admin;
@@ -27,6 +29,7 @@ export async function GET(req: NextRequest) {
     conditions.push(
       or(
         ilike(users.full_name, `%${q}%`),
+        ilike(users.phone, `%${q}%`),
         ilike(workerProfiles.city, `%${q}%`),
         sql`EXISTS (SELECT 1 FROM unnest(${workerProfiles.experience_tags}) tag WHERE tag ILIKE ${`%${q}%`})`
       )!
@@ -34,7 +37,7 @@ export async function GET(req: NextRequest) {
   }
   const where = and(...conditions);
 
-  const [rows, countResult] = await Promise.all([
+  const [workerRows, countResult, allWorkerPhones, inviteRows] = await Promise.all([
     db
       .select({
         id: users.id,
@@ -59,11 +62,102 @@ export async function GET(req: NextRequest) {
       .from(users)
       .leftJoin(workerProfiles, eq(users.id, workerProfiles.user_id))
       .where(where),
+    // All worker phones (unpaginated) — used to detect which invites already converted
+    db
+      .select({ phone: users.phone })
+      .from(users)
+      .where(eq(users.role, UserRole.WORKER)),
+    // All employer invites, newest first, with the inviting employer's business name
+    db
+      .select({
+        id: workerInvites.id,
+        employer_id: workerInvites.employer_id,
+        employer_name: employerProfiles.business_name,
+        invited_phone: workerInvites.invited_phone,
+        normalized_phone: workerInvites.normalized_phone,
+        status: workerInvites.status,
+        sent_at: workerInvites.sent_at,
+        joined_at: workerInvites.joined_at,
+      })
+      .from(workerInvites)
+      .leftJoin(employerProfiles, eq(workerInvites.employer_id, employerProfiles.user_id))
+      .orderBy(desc(workerInvites.sent_at)),
   ]);
 
+  // Group invites by normalized phone. Rows are already ordered newest-first,
+  // so the first entry per phone is the most recent ("primary") inviter.
+  const invitesByPhone = new Map<string, typeof inviteRows>();
+  for (const inv of inviteRows) {
+    const arr = invitesByPhone.get(inv.normalized_phone);
+    if (arr) arr.push(inv);
+    else invitesByPhone.set(inv.normalized_phone, [inv]);
+  }
+
+  const registeredPhones = new Set(allWorkerPhones.map((w) => normalizePhone(w.phone)));
+
+  // Registered workers: attach invite-origin info (if this phone was ever invited by an employer)
+  const workerData = workerRows.map((row) => {
+    const normalized = normalizePhone(row.phone);
+    const invites = invitesByPhone.get(normalized);
+    const primaryInvite = invites?.[0];
+
+    return {
+      ...row,
+      status: primaryInvite ? "JOINED" : "REGISTERED",
+      source: primaryInvite ? "employer_invite" : "direct",
+      inviter_employer_id: primaryInvite?.employer_id || null,
+      inviter_employer_name: primaryInvite?.employer_name || null,
+      invite_sent_at: primaryInvite?.sent_at || null,
+      joined_at: row.created_at,
+      whatsapp_status: primaryInvite?.status || null,
+      invite_count: invites?.length || 0,
+    };
+  });
+
+  // Invite-only rows: phones that were invited but never registered as a worker
+  let inviteOnlyData = Array.from(invitesByPhone.entries())
+    .filter(([normalized]) => !registeredPhones.has(normalized))
+    .map(([normalized, invites]) => {
+      const primary = invites[0];
+      return {
+        id: `invite:${primary.id}`,
+        phone: primary.invited_phone,
+        full_name: null,
+        is_active: false,
+        created_by_admin: false,
+        created_at: primary.sent_at,
+        city: null,
+        experience_tags: [] as string[],
+        trust_score: null,
+        total_shifts: null,
+        status: primary.status === "FAILED" ? "FAILED" : "INVITED",
+        source: "employer_invite",
+        inviter_employer_id: primary.employer_id,
+        inviter_employer_name: primary.employer_name,
+        invite_sent_at: primary.sent_at,
+        joined_at: primary.joined_at,
+        whatsapp_status: primary.status,
+        invite_count: invites.length,
+        normalized_phone: normalized,
+      };
+    });
+
+  if (q) {
+    const needle = q.toLowerCase();
+    inviteOnlyData = inviteOnlyData.filter(
+      (row) =>
+        row.phone.toLowerCase().includes(needle) ||
+        (row.inviter_employer_name || "").toLowerCase().includes(needle)
+    );
+  }
+
+  inviteOnlyData = inviteOnlyData
+    .sort((a, b) => new Date(b.invite_sent_at ?? 0).getTime() - new Date(a.invite_sent_at ?? 0).getTime())
+    .slice(0, limit);
+
   return NextResponse.json({
-    data: rows,
-    total: countResult[0]?.count || 0,
+    data: [...workerData, ...inviteOnlyData],
+    total: (countResult[0]?.count || 0) + inviteOnlyData.length,
     page,
     limit,
   });

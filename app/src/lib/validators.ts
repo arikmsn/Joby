@@ -264,6 +264,14 @@ export const workerSearchByPhoneSchema = z.object({
     .regex(/^\+?[0-9]+$/, "מספר טלפון לא תקין"),
 });
 
+export const inviteNewWorkerSchema = z.object({
+  phone: z
+    .string()
+    .min(9)
+    .max(15)
+    .regex(/^\+?[0-9]+$/, "מספר טלפון לא תקין"),
+});
+
 // --- Payment status (Sprint 6, admin) ---
 
 export const updatePaymentStatusSchema = z.object({

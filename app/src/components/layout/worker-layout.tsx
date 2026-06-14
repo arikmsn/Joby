@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Briefcase, ClipboardList, User, Bell, QrCode, Wallet } from "lucide-react";
 import { BottomNavLink } from "./nav-link";
 import { RoleMismatchBanner } from "./role-mismatch-banner";
-import { JobyMark } from "@/components/ui/joby-mark";
+import { JobyLogo } from "@/components/ui/joby-logo";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useAuth } from "@/lib/auth-context";
 import { t } from "@/lib/i18n/he";
@@ -63,10 +63,10 @@ export function WorkerLayout({ children }: { children: ReactNode }) {
       {showOnboarding && (
         <WorkerOnboarding initialStep={onboardingInitialStep} onClose={() => setShowOnboarding(false)} />
       )}
-      <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border-light px-4 py-3">
+      <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border-light px-4 py-2.5">
         <div className="flex items-center gap-2 max-w-lg mx-auto">
-          <JobyMark className="h-6 w-6" />
-          <span className="text-sm font-semibold text-foreground tracking-tight">
+          <JobyLogo size={32} className="h-8 w-8" />
+          <span className="text-base font-bold text-foreground tracking-tight">
             {t("app.name")}
           </span>
         </div>
@@ -78,8 +78,8 @@ export function WorkerLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <nav className="fixed bottom-0 inset-x-0 z-30 border-t border-border bg-surface shadow-[0_-2px_12px_-1px_rgb(0_0_0_/_0.06)] safe-area-bottom">
-        <div className="mx-auto max-w-lg flex items-stretch">
+      <nav className="fixed bottom-0 inset-x-0 z-30 border-t border-border-light bg-surface/95 backdrop-blur-sm shadow-[0_-4px_16px_-4px_rgb(15_23_42_/_0.08)] safe-area-bottom">
+        <div className="mx-auto max-w-lg flex items-stretch px-1">
           <BottomNavLink
             href="/shifts"
             icon={<Briefcase className="h-5 w-5" />}

@@ -24,7 +24,7 @@ export function JobyMark({ className = "h-6 w-6", tone = "brand" }: JobyMarkProp
 
   return (
     <svg viewBox="0 0 24 24" className={className} xmlns="http://www.w3.org/2000/svg">
-      <rect width="24" height="24" rx="6" fill="#0d9488" />
+      <rect width="24" height="24" rx="6" fill="#00C9A7" />
       <path
         d="M14.75 5.5V14.25C14.75 16.8734 12.6234 19 10 19C8.78 19 7.62 18.6 6.65 17.9"
         stroke="white"

@@ -16,13 +16,40 @@ import { Plus, Search } from "lucide-react";
 interface WorkerRow {
   id: string;
   phone: string;
-  full_name: string;
+  full_name: string | null;
   is_active: boolean;
   created_by_admin: boolean;
+  created_at: string;
   city: string | null;
   experience_tags: string[] | null;
-  trust_score: number;
-  total_shifts: number;
+  trust_score: number | null;
+  total_shifts: number | null;
+  status: "REGISTERED" | "JOINED" | "INVITED" | "FAILED";
+  source: "direct" | "employer_invite";
+  inviter_employer_id: string | null;
+  inviter_employer_name: string | null;
+  invite_sent_at: string | null;
+  joined_at: string | null;
+  whatsapp_status: string | null;
+  invite_count: number;
+}
+
+function statusBadge(status: WorkerRow["status"]): { variant: "success" | "secondary" | "info" | "destructive"; label: string } {
+  switch (status) {
+    case "REGISTERED":
+      return { variant: "success", label: t("admin.workers.status_registered") };
+    case "JOINED":
+      return { variant: "success", label: t("admin.workers.status_joined") };
+    case "FAILED":
+      return { variant: "destructive", label: t("admin.workers.status_failed") };
+    default:
+      return { variant: "secondary", label: t("admin.workers.status_invited") };
+  }
+}
+
+function formatDate(date: string | null): string {
+  if (!date) return "";
+  return new Date(date).toLocaleDateString("he-IL");
 }
 
 export default function AdminWorkersPage() {
@@ -141,15 +168,15 @@ export default function AdminWorkersPage() {
         </Card>
       ) : (
         <div className="space-y-2">
-          {rows.map((row) => (
-            <Link
-              key={row.id}
-              href={`/admin-workers/${row.id}`}
-              className="block p-4 bg-surface rounded-xl border border-border hover:border-primary/30 hover:shadow-card-hover transition-all"
-            >
+          {rows.map((row) => {
+            const isRegistered = !row.id.startsWith("invite:");
+            const badge = statusBadge(row.status);
+            const content = (
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-semibold text-foreground">{row.full_name}</h3>
+                  <h3 className="font-semibold text-foreground">
+                    {row.full_name || t("admin.workers.no_name")}
+                  </h3>
                   <p className="text-sm text-foreground-secondary mt-0.5">
                     <span dir="ltr">{row.phone}</span>
                     {row.city ? ` · ${row.city}` : ""}
@@ -161,19 +188,50 @@ export default function AdminWorkersPage() {
                       </Badge>
                     ))}
                   </div>
+                  {row.source === "employer_invite" && (
+                    <p className="text-xs text-foreground-secondary mt-1.5">
+                      {t("admin.workers.invited_by")}: {row.inviter_employer_name || "—"}
+                      {row.invite_count > 1 && (
+                        <span> ({t("admin.workers.invite_count_extra").replace("{count}", String(row.invite_count - 1))})</span>
+                      )}
+                      {row.invite_sent_at && (
+                        <span> · {t("admin.workers.invite_sent_at").replace("{date}", formatDate(row.invite_sent_at))}</span>
+                      )}
+                      {row.status === "JOINED" && row.joined_at && (
+                        <span> · {t("admin.workers.joined_at").replace("{date}", formatDate(row.joined_at))}</span>
+                      )}
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
-                  <TrustBadge score={row.trust_score} totalShifts={row.total_shifts} />
-                  <Badge variant={row.is_active ? "success" : "muted"}>
-                    {row.is_active ? t("admin.common.active") : t("admin.common.inactive")}
-                  </Badge>
+                  {isRegistered && <TrustBadge score={row.trust_score} totalShifts={row.total_shifts ?? 0} />}
+                  <Badge variant={badge.variant}>{badge.label}</Badge>
+                  {isRegistered && (
+                    <Badge variant={row.is_active ? "success" : "muted"}>
+                      {row.is_active ? t("admin.common.active") : t("admin.common.inactive")}
+                    </Badge>
+                  )}
                   {row.created_by_admin && (
                     <Badge variant="info">{t("admin.common.admin_created")}</Badge>
                   )}
                 </div>
               </div>
-            </Link>
-          ))}
+            );
+
+            return isRegistered ? (
+              <Link
+                key={row.id}
+                href={`/admin-workers/${row.id}`}
+                className="block p-4 bg-surface rounded-xl border border-border hover:border-primary/30 hover:shadow-card-hover transition-all"
+              >
+                {content}
+              </Link>
+            ) : (
+              <div key={row.id} className="block p-4 bg-surface rounded-xl border border-border border-dashed">
+                {content}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
