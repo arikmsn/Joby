@@ -679,6 +679,24 @@ const he = {
   "trust.how_to_improve": "איך לשפר? הגיעו בזמן, אל תבטלו ברגע האחרון, וצברו עוד משמרות שהושלמו בהצלחה.",
   "my_shifts.qr_action": "סריקת QR",
   "notification.approval.whatsapp": "אושרת למשמרת \"{title}\" אצל {employer} ב-{date}! היכנס/י לאפליקציה לפרטים: https://joby-opal.vercel.app/my-shifts",
+
+  // --- Worker feed behavior + filtering sprint ---
+  "feed.search_business": "חיפוש לפי שם עסק",
+  "feed.filter_pay_range": "טווח שכר לשעה",
+  "feed.pay_min_placeholder": "משכר",
+  "feed.pay_max_placeholder": "עד שכר",
+  "feed.filter_date_range": "טווח תאריכים",
+  "feed.date_from": "מתאריך",
+  "feed.date_to": "עד תאריך",
+  "feed.applied_pending": "ממתין/ה לאישור",
+  "feed.applied_pending_sub": "הגשת מועמדות נשלחה למעסיק",
+  "apply.ack_required": "יש לאשר את דרישות המשרה לפני הגשת מועמדות",
+  "apply.requirements_title": "דרישות מהמעסיק",
+  "apply.ack_checkbox": "קראתי ואני מאשר/ת שאני עומד/ת בדרישות שצוינו",
+  "shift.requirements_ack_label": "אישור דרישות מהעובד/ת (אופציונלי)",
+  "shift.requirements_ack_placeholder": "לדוגמה: קראתי והבנתי את דרישות התפקיד ואני מאשר/ת שאני עומד/ת בהן",
+  "application.pending_title": "ממתין/ה לאישור המעסיק",
+  "application.pending_sub": "נעדכן אותך כשהמעסיק יגיב לבקשה",
 } as const;
 
 export type TranslationKey = keyof typeof he;

@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
     arrival_notes: data.arrival_notes || null,
     contact_name: data.contact_name || null,
     contact_phone: data.contact_phone || null,
+    requirements_ack: data.requirements_ack || null,
     min_trust_score: data.min_trust_score.toString(),
   }).returning();
 
@@ -119,6 +120,7 @@ export async function GET(req: NextRequest) {
       arrival_notes: shifts.arrival_notes,
       contact_name: shifts.contact_name,
       contact_phone: shifts.contact_phone,
+      requirements_ack: shifts.requirements_ack,
       min_trust_score: shifts.min_trust_score,
       created_at: shifts.created_at,
       updated_at: shifts.updated_at,

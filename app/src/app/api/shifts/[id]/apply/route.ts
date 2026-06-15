@@ -33,6 +33,16 @@ export async function POST(
 
   const shift = shiftRows[0];
 
+  if (shift.requirements_ack && shift.requirements_ack.trim()) {
+    const body = await req.json().catch(() => ({}));
+    if (body?.acknowledged !== true) {
+      return NextResponse.json(
+        { error: "ACK_REQUIRED", message: t("apply.ack_required") },
+        { status: 400 }
+      );
+    }
+  }
+
   if (shift.status !== "PUBLISHED") {
     return NextResponse.json(
       { error: "NOT_PUBLISHED", message: t("apply.shift_not_published") },

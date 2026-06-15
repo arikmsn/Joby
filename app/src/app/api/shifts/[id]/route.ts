@@ -33,6 +33,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       arrival_notes: shifts.arrival_notes,
       contact_name: shifts.contact_name,
       contact_phone: shifts.contact_phone,
+      requirements_ack: shifts.requirements_ack,
       min_trust_score: shifts.min_trust_score,
       created_at: shifts.created_at,
       updated_at: shifts.updated_at,
@@ -113,7 +114,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   // If published, only allow limited fields
   if (shift.status === ShiftStatus.PUBLISHED) {
-    const allowedPublished = ["description", "dress_code", "gear_required", "arrival_notes", "contact_name", "contact_phone"];
+    const allowedPublished = ["description", "dress_code", "gear_required", "arrival_notes", "contact_name", "contact_phone", "requirements_ack"];
     const keys = Object.keys(parsed.data).filter((k) => (parsed.data as Record<string, unknown>)[k] !== undefined);
     const disallowed = keys.filter((k) => !allowedPublished.includes(k));
     if (disallowed.length > 0) {
@@ -149,6 +150,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (d.arrival_notes !== undefined) updateData.arrival_notes = d.arrival_notes;
   if (d.contact_name !== undefined) updateData.contact_name = d.contact_name;
   if (d.contact_phone !== undefined) updateData.contact_phone = d.contact_phone;
+  if (d.requirements_ack !== undefined) updateData.requirements_ack = d.requirements_ack;
   if (d.min_trust_score !== undefined) updateData.min_trust_score = d.min_trust_score.toString();
 
   const updated = await db

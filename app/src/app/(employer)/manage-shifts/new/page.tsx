@@ -42,6 +42,7 @@ export default function CreateShiftPage() {
     arrival_notes: "",
     contact_name: "",
     contact_phone: "",
+    requirements_ack: "",
     min_trust_score: "0",
   });
 
@@ -84,6 +85,7 @@ export default function CreateShiftPage() {
         arrival_notes: form.arrival_notes || undefined,
         contact_name: form.contact_name || undefined,
         contact_phone: form.contact_phone || undefined,
+        requirements_ack: form.requirements_ack || undefined,
         min_trust_score: parseFloat(form.min_trust_score) || 0,
         publish,
       };
@@ -178,6 +180,11 @@ export default function CreateShiftPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input id="contact_name" label={t("shift.contact_name")} value={form.contact_name} onChange={(e) => set("contact_name", e.target.value)} />
               <Input id="contact_phone" label={t("shift.contact_phone")} type="tel" dir="ltr" value={form.contact_phone} onChange={(e) => set("contact_phone", e.target.value)} />
+            </div>
+
+            <div>
+              <label htmlFor="requirements_ack" className="block text-sm font-medium text-foreground mb-1">{t("shift.requirements_ack_label")}</label>
+              <textarea id="requirements_ack" className="w-full rounded-lg border border-border px-3 py-2 text-sm min-h-[60px] focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" placeholder={t("shift.requirements_ack_placeholder")} value={form.requirements_ack} onChange={(e) => set("requirements_ack", e.target.value)} />
             </div>
 
             <Input id="min_trust_score" label={t("shift.min_trust")} type="number" dir="ltr" step="0.1" min="0" max="5" value={form.min_trust_score} onChange={(e) => set("min_trust_score", e.target.value)} />

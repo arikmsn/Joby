@@ -48,6 +48,7 @@ interface ShiftDetail {
   arrival_notes: string | null;
   contact_name: string | null;
   contact_phone: string | null;
+  requirements_ack: string | null;
   employer_name: string;
   business_name: string;
   has_sos?: boolean;
@@ -86,6 +87,7 @@ export default function ShiftDetailsPage() {
   const [error, setError] = useState("");
   const [applying, setApplying] = useState(false);
   const [applyMsg, setApplyMsg] = useState("");
+  const [acknowledged, setAcknowledged] = useState(false);
 
   useEffect(() => {
     if (!token || !shiftId) return;
@@ -108,7 +110,11 @@ export default function ShiftDetailsPage() {
     try {
       const res = await fetch(`/api/shifts/${shiftId}/apply`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ acknowledged }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -339,7 +345,7 @@ export default function ShiftDetailsPage() {
       )}
 
       {/* Requirements */}
-      {(shift.dress_code || shift.gear_required || shift.arrival_notes) && (
+      {(shift.dress_code || shift.gear_required || shift.arrival_notes || shift.requirements_ack) && (
         <Card className="space-y-3">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-tertiary">
             {t("shift.requirements")}
@@ -383,6 +389,19 @@ export default function ShiftDetailsPage() {
               </div>
             </div>
           )}
+          {shift.requirements_ack && (
+            <div className="flex items-start gap-3 text-sm">
+              <CheckCircle2 className="h-4 w-4 text-foreground-tertiary mt-0.5 shrink-0" />
+              <div>
+                <span className="font-medium text-foreground">
+                  {t("apply.requirements_title")}:
+                </span>{" "}
+                <span className="text-foreground-secondary whitespace-pre-line">
+                  {shift.requirements_ack}
+                </span>
+              </div>
+            </div>
+          )}
         </Card>
       )}
 
@@ -410,8 +429,11 @@ export default function ShiftDetailsPage() {
         </Card>
       )}
 
+      {/* Spacer so the sticky apply bar never covers the content above it */}
+      <div className="h-1" aria-hidden="true" />
+
       {/* Apply section */}
-      <div className="sticky bottom-16 -mx-4 px-4 pt-3 pb-3 bg-surface border-t border-border shadow-[0_-2px_12px_-1px_rgb(0_0_0_/_0.04)] space-y-2">
+      <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] -mx-4 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-surface border-t border-border shadow-[0_-2px_12px_-1px_rgb(0_0_0_/_0.04)] space-y-2">
         {shift.my_application && shift.my_application.status === "CANCELLED_BY_WORKER" &&
         shift.status === "PUBLISHED" && new Date(shift.start_at) > new Date() ? (
           <>
@@ -432,6 +454,14 @@ export default function ShiftDetailsPage() {
               {t("apply.not_commitment")}
             </p>
           </>
+        ) : shift.my_application && shift.my_application.status === "PENDING" ? (
+          <div className="flex items-center gap-3 rounded-xl bg-warning/10 px-4 py-3">
+            <CheckCircle2 className="h-5 w-5 text-warning shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-foreground">{t("application.pending_title")}</p>
+              <p className="text-xs text-foreground-secondary">{t("application.pending_sub")}</p>
+            </div>
+          </div>
         ) : shift.my_application ? (
           <div className="space-y-2">
             <div className="flex items-center justify-center gap-2 py-1">
@@ -469,11 +499,25 @@ export default function ShiftDetailsPage() {
           </div>
         ) : (
           <>
+            {shift.requirements_ack && (
+              <label className="flex items-start gap-2.5 rounded-xl bg-background px-3 py-2.5 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acknowledged}
+                  onChange={(e) => setAcknowledged(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                />
+                <span className="text-foreground-secondary leading-snug">
+                  {t("apply.ack_checkbox")}
+                </span>
+              </label>
+            )}
             <Button
               className="w-full"
               size="lg"
               onClick={handleApply}
               loading={applying}
+              disabled={!!shift.requirements_ack && !acknowledged}
             >
               {t("apply.button")}
             </Button>

@@ -60,7 +60,7 @@ export default function EditShiftPage() {
   const [form, setForm] = useState({
     title: "", role_tag: "", description: "", location_name: "", city: "", address: "",
     date: "", start_time: "", end_time: "", pay_rate: "", pay_type: "hourly", workers_needed: "1",
-    dress_code: "", gear_required: "", arrival_notes: "", contact_name: "", contact_phone: "", min_trust_score: "0",
+    dress_code: "", gear_required: "", arrival_notes: "", contact_name: "", contact_phone: "", requirements_ack: "", min_trust_score: "0",
   });
 
   function set(field: string, value: string) {
@@ -106,6 +106,7 @@ export default function EditShiftPage() {
           dress_code: s.dress_code || "", gear_required: s.gear_required || "",
           arrival_notes: s.arrival_notes || "", contact_name: s.contact_name || "",
           contact_phone: s.contact_phone || "",
+          requirements_ack: s.requirements_ack || "",
           min_trust_score: String(s.min_trust_score || "0"),
         });
         setLoading(false);
@@ -156,6 +157,7 @@ export default function EditShiftPage() {
       body.arrival_notes = form.arrival_notes || undefined;
       body.contact_name = form.contact_name || undefined;
       body.contact_phone = form.contact_phone || undefined;
+      body.requirements_ack = form.requirements_ack || undefined;
       body.min_trust_score = parseFloat(form.min_trust_score) || 0;
 
       const res = await fetch(`/api/shifts/${shiftId}`, {
@@ -286,6 +288,11 @@ export default function EditShiftPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input id="contact_name" label={t("shift.contact_name")} value={form.contact_name} onChange={(e) => set("contact_name", e.target.value)} disabled={isCancelled} />
               <Input id="contact_phone" label={t("shift.contact_phone")} type="tel" dir="ltr" value={form.contact_phone} onChange={(e) => set("contact_phone", e.target.value)} disabled={isCancelled} />
+            </div>
+
+            <div>
+              <label htmlFor="requirements_ack" className="block text-sm font-medium text-foreground mb-1">{t("shift.requirements_ack_label")}</label>
+              <textarea id="requirements_ack" className="w-full rounded-lg border border-border px-3 py-2 text-sm min-h-[60px] disabled:bg-background disabled:text-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" placeholder={t("shift.requirements_ack_placeholder")} value={form.requirements_ack} onChange={(e) => set("requirements_ack", e.target.value)} disabled={isCancelled} />
             </div>
 
             <Input id="min_trust_score" label={t("shift.min_trust")} type="number" dir="ltr" step="0.1" min="0" max="5" value={form.min_trust_score} onChange={(e) => set("min_trust_score", e.target.value)} disabled={isCancelled} />

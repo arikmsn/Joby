@@ -64,6 +64,7 @@ export const createShiftSchema = z
     arrival_notes: z.string().max(500).optional(),
     contact_name: z.string().max(255).optional(),
     contact_phone: z.string().max(20).optional(),
+    requirements_ack: z.string().max(1000).optional(),
     min_trust_score: z.number().min(0).max(5).default(0),
     publish: z.boolean().default(false),
   })
@@ -92,6 +93,7 @@ export const updateShiftSchema = z
     arrival_notes: z.string().max(500).optional(),
     contact_name: z.string().max(255).optional(),
     contact_phone: z.string().max(20).optional(),
+    requirements_ack: z.string().max(1000).optional(),
     min_trust_score: z.number().min(0).max(5).optional(),
   });
 

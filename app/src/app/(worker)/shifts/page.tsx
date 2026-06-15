@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 
 const DISMISSED_KEY = "joby_dismissed_shifts";
+const OPENED_KEY = "joby_opened_shifts";
 
 function getDismissedIds(): Set<string> {
   try {
@@ -42,6 +43,23 @@ function dismissShift(id: string) {
   ids.add(id);
   try {
     localStorage.setItem(DISMISSED_KEY, JSON.stringify(Array.from(ids)));
+  } catch { /* quota */ }
+}
+
+function getOpenedIds(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(OPENED_KEY) || "[]"));
+  } catch {
+    return new Set();
+  }
+}
+
+function markOpened(id: string) {
+  const ids = getOpenedIds();
+  if (ids.has(id)) return;
+  ids.add(id);
+  try {
+    localStorage.setItem(OPENED_KEY, JSON.stringify(Array.from(ids)));
   } catch { /* quota */ }
 }
 
@@ -62,21 +80,6 @@ interface FeedShift {
   business_name: string;
   has_sos?: boolean;
   my_application?: { id: string; status: string; is_backup: boolean } | null;
-}
-
-function appliedBadge(app: { status: string; is_backup: boolean }) {
-  const map: Record<string, { label: string; variant: "default" | "secondary" | "success" | "warning" | "danger" | "muted" | "info" }> = {
-    PENDING: { label: t("application.status.pending"), variant: "warning" },
-    APPROVED: {
-      label: app.is_backup ? t("applicants.backup") : t("application.status.approved"),
-      variant: app.is_backup ? "info" : "success",
-    },
-    CONFIRMED: { label: t("application.status.confirmed"), variant: "success" },
-    REJECTED: { label: t("application.status.rejected"), variant: "danger" },
-    CHECKED_IN: { label: t("application.status.checked_in"), variant: "success" },
-  };
-  const m = map[app.status];
-  return m ? <Badge variant={m.variant}>{m.label}</Badge> : null;
 }
 
 function dayKey(iso: string) {
@@ -105,16 +108,22 @@ export default function WorkerShiftFeed() {
   const [roleFilters, setRoleFilters] = useState<string[]>([]);
   const [roleSearch, setRoleSearch] = useState("");
   const [cityFilter, setCityFilter] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
+  const [businessSearch, setBusinessSearch] = useState("");
+  const [payMin, setPayMin] = useState("");
+  const [payMax, setPayMax] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [newCount, setNewCount] = useState(0);
   const [activeTab, setActiveTab] = useState<"matched" | "all">("matched");
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const [openedIds, setOpenedIds] = useState<Set<string>>(new Set());
   const [weeklyEarnings, setWeeklyEarnings] = useState<number | null>(null);
 
-  // Load dismissed IDs from localStorage
+  // Load dismissed/opened IDs from localStorage
   useEffect(() => {
     setDismissedIds(getDismissedIds());
+    setOpenedIds(getOpenedIds());
   }, []);
 
   // Fetch actual weekly earnings for the hero
@@ -135,7 +144,6 @@ export default function WorkerShiftFeed() {
       const params = new URLSearchParams({ limit: "50" });
       if (roleFilters.length > 0) params.set("role_tags", roleFilters.join(","));
       if (cityFilter) params.set("city", cityFilter);
-      if (dateFilter) params.set("date", dateFilter);
 
       const res = await fetch(`/api/shifts?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -148,7 +156,7 @@ export default function WorkerShiftFeed() {
     } finally {
       setLoading(false);
     }
-  }, [token, roleFilters, cityFilter, dateFilter]);
+  }, [token, roleFilters, cityFilter]);
 
   useEffect(() => {
     fetchShifts();
@@ -161,7 +169,6 @@ export default function WorkerShiftFeed() {
         const params = new URLSearchParams({ limit: "50" });
         if (roleFilters.length > 0) params.set("role_tags", roleFilters.join(","));
         if (cityFilter) params.set("city", cityFilter);
-        if (dateFilter) params.set("date", dateFilter);
 
         const res = await fetch(`/api/shifts?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -177,17 +184,12 @@ export default function WorkerShiftFeed() {
       } catch { /* ignore */ }
     }, 60000);
     return () => clearInterval(interval);
-  }, [token, roleFilters, cityFilter, dateFilter, shifts]);
+  }, [token, roleFilters, cityFilter, shifts]);
 
-  // Filter out approved shifts and dismissed shifts
+  // Hide dismissed shifts and any shift the worker has already applied to
+  // (applied shifts are tracked on the "My Shifts" page instead)
   const visibleShifts = useMemo(
-    () =>
-      shifts.filter(
-        (s) =>
-          !dismissedIds.has(s.id) &&
-          (!s.my_application ||
-            !["APPROVED", "CONFIRMED", "CHECKED_IN"].includes(s.my_application.status))
-      ),
+    () => shifts.filter((s) => !dismissedIds.has(s.id) && !s.my_application),
     [shifts, dismissedIds]
   );
 
@@ -195,6 +197,26 @@ export default function WorkerShiftFeed() {
     () => Array.from(new Set(visibleShifts.map((s) => s.city).filter(Boolean))) as string[],
     [visibleShifts]
   );
+
+  // Additional client-side filters: business name, pay range, date range
+  const filteredShifts = useMemo(() => {
+    const search = businessSearch.trim().toLowerCase();
+    const min = payMin ? Number(payMin) : null;
+    const max = payMax ? Number(payMax) : null;
+    const from = dateFrom ? new Date(dateFrom) : null;
+    const to = dateTo ? new Date(dateTo) : null;
+    if (to) to.setHours(23, 59, 59, 999);
+
+    return visibleShifts.filter((s) => {
+      if (search && !(s.business_name || "").toLowerCase().includes(search)) return false;
+      if (min != null && Number(s.pay_rate) < min) return false;
+      if (max != null && Number(s.pay_rate) > max) return false;
+      const start = new Date(s.start_at);
+      if (from && start < from) return false;
+      if (to && start > to) return false;
+      return true;
+    });
+  }, [visibleShifts, businessSearch, payMin, payMax, dateFrom, dateTo]);
 
   const preferredRoles = workerProfile?.experience_tags || [];
   const preferredCities = workerProfile?.preferred_cities || [];
@@ -215,8 +237,8 @@ export default function WorkerShiftFeed() {
   }
 
   const matchedShifts = useMemo(() => {
-    if (!hasPreferences) return visibleShifts;
-    return visibleShifts
+    if (!hasPreferences) return filteredShifts;
+    return filteredShifts
       .filter((s) => roleMatches(s) || cityMatches(s))
       .slice()
       .sort((a, b) => {
@@ -224,11 +246,13 @@ export default function WorkerShiftFeed() {
         return score(b) - score(a);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleShifts, hasPreferences, preferredRoles, preferredCities]);
+  }, [filteredShifts, hasPreferences, preferredRoles, preferredCities]);
 
-  const displayedShifts = activeTab === "matched" ? matchedShifts : visibleShifts;
+  const displayedShifts = activeTab === "matched" ? matchedShifts : filteredShifts;
 
-  const activeFilterCount = roleFilters.length + [cityFilter, dateFilter].filter(Boolean).length;
+  const activeFilterCount =
+    roleFilters.length +
+    [cityFilter, businessSearch, payMin, payMax, dateFrom, dateTo].filter(Boolean).length;
 
   const sortedOccupations = useMemo(
     () => [...occupations].sort((a, b) => a.label_he.localeCompare(b.label_he, "he")),
@@ -247,7 +271,11 @@ export default function WorkerShiftFeed() {
     setRoleFilters([]);
     setRoleSearch("");
     setCityFilter("");
-    setDateFilter("");
+    setBusinessSearch("");
+    setPayMin("");
+    setPayMax("");
+    setDateFrom("");
+    setDateTo("");
   }
 
   function formatTimeOnly(iso: string) {
@@ -278,6 +306,11 @@ export default function WorkerShiftFeed() {
     e.stopPropagation();
     dismissShift(shiftId);
     setDismissedIds(getDismissedIds());
+  }
+
+  function handleOpen(shiftId: string) {
+    markOpened(shiftId);
+    setOpenedIds(getOpenedIds());
   }
 
   // Group shifts by day
@@ -311,6 +344,7 @@ export default function WorkerShiftFeed() {
   function ShiftRow({ shift }: { shift: FeedShift }) {
     const spotsLeft = shift.workers_needed - shift.slots_filled;
     const soon = isStartingSoon(shift.start_at);
+    const isUnopened = !openedIds.has(shift.id);
 
     const matchCount = (roleMatches(shift) ? 1 : 0) + (cityMatches(shift) ? 1 : 0) + (payMatches(shift) ? 1 : 0);
     const matchScore = hasPreferences ? Math.round((matchCount / 3) * 100) : 0;
@@ -320,10 +354,14 @@ export default function WorkerShiftFeed() {
       <div className="relative group">
         <Link
           href={`/shifts/${shift.id}`}
+          onClick={() => handleOpen(shift.id)}
           className="block rounded-2xl border border-border bg-surface p-4 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card-hover active:scale-[0.99] animate-card-pop"
         >
           {/* Badges */}
           <div className="flex items-center gap-1.5 flex-wrap mb-2.5 empty:mb-0">
+            {isUnopened && (
+              <span className="inline-block h-2 w-2 rounded-full bg-primary shrink-0" aria-hidden="true" />
+            )}
             {shift.has_sos && (
               <span className="inline-flex items-center gap-1 rounded-full bg-danger px-2.5 py-0.5 text-xs font-bold text-white">
                 <AlertTriangle className="h-3 w-3" />
@@ -345,7 +383,6 @@ export default function WorkerShiftFeed() {
             {spotsLeft === 1 && (
               <Badge variant="warning">{t("feed.badge_urgent")}</Badge>
             )}
-            {shift.my_application && appliedBadge(shift.my_application)}
           </div>
 
           <div className="flex items-start justify-between gap-3">
@@ -407,23 +444,16 @@ export default function WorkerShiftFeed() {
               {spotsLeft === 0 ? t("feed.full") : `${spotsLeft} ${t("feed.spots_left")}`}
             </div>
           )}
-
-          {/* CTA */}
-          <div className="mt-3 rounded-xl bg-secondary/8 text-secondary text-sm font-bold text-center py-2.5 transition-colors">
-            {t("feed.cta_view_opportunity")}
-          </div>
         </Link>
 
         {/* Dismiss button */}
-        {!shift.my_application && (
-          <button
-            onClick={(e) => handleDismiss(shift.id, e)}
-            className="absolute top-3 start-3 opacity-0 group-hover:opacity-100 focus:opacity-100 rounded-full p-1.5 bg-surface/90 border border-border text-foreground-tertiary hover:text-foreground hover:bg-surface transition-all duration-150 shadow-sm"
-            title={t("feed.dismiss_shift")}
-          >
-            <EyeOff className="h-3.5 w-3.5" />
-          </button>
-        )}
+        <button
+          onClick={(e) => handleDismiss(shift.id, e)}
+          className="absolute top-3 start-3 opacity-0 group-hover:opacity-100 focus:opacity-100 rounded-full p-1.5 bg-surface/90 border border-border text-foreground-tertiary hover:text-foreground hover:bg-surface transition-all duration-150 shadow-sm"
+          title={t("feed.dismiss_shift")}
+        >
+          <EyeOff className="h-3.5 w-3.5" />
+        </button>
       </div>
     );
   }
@@ -619,12 +649,54 @@ export default function WorkerShiftFeed() {
               ))}
             </select>
             <input
-              type="date"
+              type="text"
+              value={businessSearch}
+              onChange={(e) => setBusinessSearch(e.target.value)}
+              placeholder={t("feed.search_business")}
               className="flex-1 min-w-[120px] rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-shadow"
-              dir="ltr"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
             />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-foreground-secondary mb-1.5">{t("feed.filter_pay_range")}</p>
+            <div className="flex items-center gap-2" dir="ltr">
+              <input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                value={payMin}
+                onChange={(e) => setPayMin(e.target.value)}
+                placeholder={t("feed.pay_min_placeholder")}
+                className="flex-1 min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-shadow"
+              />
+              <span className="text-foreground-tertiary text-sm">–</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                value={payMax}
+                onChange={(e) => setPayMax(e.target.value)}
+                placeholder={t("feed.pay_max_placeholder")}
+                className="flex-1 min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-shadow"
+              />
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-foreground-secondary mb-1.5">{t("feed.filter_date_range")}</p>
+            <div className="flex items-center gap-2" dir="ltr">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="flex-1 min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-shadow"
+              />
+              <span className="text-foreground-tertiary text-sm">–</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="flex-1 min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-shadow"
+              />
+            </div>
           </div>
           <div className="flex items-center gap-2 pt-1">
             {activeFilterCount > 0 && (
@@ -693,7 +765,7 @@ export default function WorkerShiftFeed() {
         <div className="space-y-5">
           {dayGroups.map((group) => (
             <div key={group.key}>
-              <div className="flex items-center gap-2 px-1 mb-2">
+              <div className="sticky top-0 z-10 -mx-1 px-1 py-1.5 mb-1 bg-background/90 backdrop-blur-sm flex items-center gap-2">
                 {group.isUrgent ? (
                   <AlertTriangle className="h-4 w-4 text-danger" />
                 ) : (

@@ -117,6 +117,7 @@ export const shifts = pgTable("shifts", {
   arrival_notes: text("arrival_notes"),
   contact_name: varchar("contact_name", { length: 255 }),
   contact_phone: varchar("contact_phone", { length: 20 }),
+  requirements_ack: text("requirements_ack"),
   min_trust_score: decimal("min_trust_score", { precision: 3, scale: 2 }).default("0.00"),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
