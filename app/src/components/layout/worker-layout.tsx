@@ -2,10 +2,10 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { Briefcase, ClipboardList, User, Bell, Wallet } from "lucide-react";
 import { BottomNavLink } from "./nav-link";
 import { RoleMismatchBanner } from "./role-mismatch-banner";
-import { JobyLogo } from "@/components/ui/joby-logo";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { useAuth } from "@/lib/auth-context";
 import { t } from "@/lib/i18n/he";
@@ -63,12 +63,16 @@ export function WorkerLayout({ children }: { children: ReactNode }) {
       {showOnboarding && (
         <WorkerOnboarding initialStep={onboardingInitialStep} onClose={() => setShowOnboarding(false)} />
       )}
-      <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border-light px-4 py-3">
-        <div className="flex items-center gap-2.5 max-w-lg mx-auto">
-          <JobyLogo size={44} className="h-11 w-11 rounded-xl shadow-card" />
-          <span className="text-xl font-extrabold text-foreground tracking-tight">
-            {t("app.name")}
-          </span>
+      <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border-light px-4 py-2.5">
+        <div className="flex items-center justify-center max-w-lg mx-auto">
+          <Image
+            src="/joby-wordmark.png"
+            alt={t("app.name")}
+            width={104}
+            height={67}
+            priority
+            className="h-9 w-auto object-contain"
+          />
         </div>
       </header>
 

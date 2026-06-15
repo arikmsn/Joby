@@ -13,6 +13,7 @@ import { EmployerAvatar } from "@/components/ui/employer-avatar";
 import { CelebrationToast } from "@/components/ui/celebration-toast";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ShiftListSkeleton } from "@/components/ui/skeleton";
+import { ShiftCalendar, type CalendarShift } from "@/components/ui/shift-calendar";
 import { Calendar, QrCode } from "lucide-react";
 import Link from "next/link";
 import {
@@ -63,6 +64,9 @@ const HISTORY_STATUSES = [
 ];
 
 const SEEN_APPROVALS_KEY = "joby_seen_approvals";
+const CALENDAR_HIDDEN_STATUSES = ["REJECTED", "CANCELLED_BY_WORKER", "CANCELLED_BY_SYSTEM"];
+
+type ViewMode = "list" | "calendar";
 
 function statusBadge(status: string, isBackup: boolean) {
   const map: Record<
@@ -134,6 +138,8 @@ export default function MyShiftsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [celebration, setCelebration] = useState<MyApplication | null>(null);
   const [cancelTarget, setCancelTarget] = useState<{ appId: string; late: boolean } | null>(null);
+  const [view, setView] = useState<ViewMode>("list");
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -239,6 +245,25 @@ export default function MyShiftsPage() {
     return `https://www.google.com/maps/search/?api=1&query=${query}`;
   }
 
+  const calendarShifts: CalendarShift[] = apps
+    .filter((a) => !CALENDAR_HIDDEN_STATUSES.includes(a.status))
+    .map((a) => ({
+      id: a.id,
+      date: new Date(a.shift_start_at),
+      business_name: a.business_name,
+      status: a.status,
+    }));
+
+  function isSameDay(a: Date, b: Date) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  const selectedDayApps = selectedDate
+    ? apps
+        .filter((a) => !CALENDAR_HIDDEN_STATUSES.includes(a.status) && isSameDay(new Date(a.shift_start_at), selectedDate))
+        .sort((a, b) => new Date(a.shift_start_at).getTime() - new Date(b.shift_start_at).getTime())
+    : [];
+
   const tabs: { key: Tab; label: string; count: number }[] = [
     {
       key: "pending",
@@ -267,15 +292,45 @@ export default function MyShiftsPage() {
         />
       )}
 
-      <div>
-        <h1 className="text-xl font-extrabold text-foreground tracking-tight">
-          {t("my_shifts.title")}
-        </h1>
-        <p className="text-sm text-foreground-secondary mt-0.5">
-          {t("my_shifts.subtitle")}
-        </p>
-      </div>
+      <SegmentedControl
+        layoutId="my-shifts-view-pill"
+        options={[
+          { value: "list", label: t("my_shifts.view_list") },
+          { value: "calendar", label: t("my_shifts.view_calendar") },
+        ]}
+        value={view}
+        onChange={(v) => {
+          setView(v);
+          if (v === "calendar") setSelectedDate(null);
+        }}
+      />
 
+      {view === "calendar" ? (
+        <div className="space-y-3">
+          <ShiftCalendar shifts={calendarShifts} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+          {selectedDate ? (
+            <div className="space-y-2">
+              {selectedDayApps.map((app) => (
+                <Card key={app.id} className="flex items-center gap-3 p-3">
+                  <EmployerAvatar name={app.business_name || app.shift_title} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-foreground truncate">{app.shift_title}</div>
+                    <p className="text-sm text-foreground-secondary truncate">
+                      {app.business_name} · {fmtTimeOnly(app.shift_start_at)}–{fmtTimeOnly(app.shift_end_at)}
+                    </p>
+                  </div>
+                  {statusBadge(app.status, app.is_backup)}
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-sm text-foreground-tertiary py-2">
+              {t("my_shifts.calendar_select_day")}
+            </p>
+          )}
+        </div>
+      ) : (
+        <>
       <SegmentedControl
         layoutId="my-shifts-tab-pill"
         options={tabs.map((tb) => ({
@@ -504,6 +559,8 @@ export default function MyShiftsPage() {
             );
           })}
         </div>
+      )}
+        </>
       )}
 
       <Sheet

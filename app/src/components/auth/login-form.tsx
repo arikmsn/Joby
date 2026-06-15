@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
@@ -9,7 +10,6 @@ import { useDocumentTitle } from "@/lib/use-document-title";
 import { t } from "@/lib/i18n/he";
 import Link from "next/link";
 import { Building2, User } from "lucide-react";
-import { JobyLogo } from "@/components/ui/joby-logo";
 import { roleHomePath, type AuthRole } from "@/lib/auth-routes";
 import type { User as AppUser, EmployerProfile, WorkerProfile } from "@/lib/types";
 
@@ -127,28 +127,37 @@ export function LoginForm({ role }: { role?: AuthRole }) {
 
   if (step === "choose") {
     return (
-      <div className="overflow-hidden rounded-3xl shadow-float">
-        <div className="hero-glow px-6 pt-10 pb-8 text-center text-white">
-          <div className="inline-flex items-center justify-center rounded-2xl bg-white/10 p-3 ring-1 ring-white/15">
-            <JobyLogo size={64} className="h-16 w-16 rounded-xl" />
-          </div>
-          <h1 className="mt-4 text-2xl font-extrabold tracking-tight">{t("auth.choose_role_title")}</h1>
+      <div className="space-y-5">
+        <div className="flex justify-center">
+          <Image
+            src="/main-logo.png"
+            alt={t("app.name")}
+            width={180}
+            height={180}
+            priority
+            className="object-contain"
+          />
         </div>
-        <div className="bg-surface px-6 py-6 space-y-3">
-          {accounts.map((account) => (
-            <button
-              key={account.user.id}
-              onClick={() => handleChooseAccount(account)}
-              className="w-full flex items-center gap-4 p-4 bg-background rounded-xl border border-border hover:border-primary hover:shadow-card-hover transition-all text-right"
-            >
-              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-primary" />
-              </div>
-              <div className="font-semibold text-foreground">
-                {account.user.role === "admin" ? t("auth.admin") : t("auth.employer")}
-              </div>
-            </button>
-          ))}
+        <div className="overflow-hidden rounded-3xl shadow-float bg-surface">
+          <div className="px-6 pt-6 pb-2 text-center">
+            <h1 className="text-xl font-extrabold tracking-tight text-foreground">{t("auth.choose_role_title")}</h1>
+          </div>
+          <div className="px-6 py-6 space-y-3">
+            {accounts.map((account) => (
+              <button
+                key={account.user.id}
+                onClick={() => handleChooseAccount(account)}
+                className="w-full flex items-center gap-4 p-4 bg-background rounded-xl border border-border hover:border-primary hover:shadow-card-hover transition-all text-right"
+              >
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Building2 className="h-6 w-6 text-primary" />
+                </div>
+                <div className="font-semibold text-foreground">
+                  {account.user.role === "admin" ? t("auth.admin") : t("auth.employer")}
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -156,16 +165,23 @@ export function LoginForm({ role }: { role?: AuthRole }) {
 
   if (!role) {
     return (
-      <div className="overflow-hidden rounded-3xl shadow-float">
-        <div className="hero-glow px-6 pt-10 pb-8 text-center text-white">
-          <div className="inline-flex items-center justify-center rounded-2xl bg-white/10 p-3 ring-1 ring-white/15">
-            <JobyLogo size={64} className="h-16 w-16 rounded-xl" />
-          </div>
-          <h1 className="mt-4 text-2xl font-extrabold tracking-tight">{t("app.name")}</h1>
-          <p className="mt-1.5 text-sm text-white/70">{t("auth.login")}</p>
+      <div className="space-y-5">
+        <div className="flex justify-center">
+          <Image
+            src="/main-logo.png"
+            alt={t("app.name")}
+            width={180}
+            height={180}
+            priority
+            className="object-contain"
+          />
         </div>
+        <div className="overflow-hidden rounded-3xl shadow-float bg-surface">
+          <div className="px-6 pt-6 pb-2 text-center">
+            <h1 className="text-xl font-extrabold tracking-tight text-foreground">{t("auth.login")}</h1>
+          </div>
 
-        <div className="bg-surface px-6 py-6 space-y-3">
+          <div className="px-6 py-6 space-y-3">
           <Link
             href="/login/worker"
             className="w-full flex items-center gap-4 p-4 bg-background rounded-xl border border-border hover:border-primary hover:shadow-card-hover transition-all text-right"
@@ -193,13 +209,14 @@ export function LoginForm({ role }: { role?: AuthRole }) {
           </Link>
         </div>
 
-        <div className="bg-surface px-6 pb-6 pt-2 border-t border-border-light">
-          <p className="text-center text-sm text-foreground-secondary">
-            {t("auth.not_registered")}{" "}
-            <Link href="/register" className="text-primary font-medium hover:underline">
-              {t("auth.register")}
-            </Link>
-          </p>
+          <div className="bg-surface px-6 pb-6 pt-2 border-t border-border-light">
+            <p className="text-center text-sm text-foreground-secondary">
+              {t("auth.not_registered")}{" "}
+              <Link href="/register" className="text-primary font-medium hover:underline">
+                {t("auth.register")}
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -209,15 +226,23 @@ export function LoginForm({ role }: { role?: AuthRole }) {
     role === "worker" ? t("auth.worker.login_tagline") : t("auth.employer.login_tagline");
 
   return (
-    <div className="overflow-hidden rounded-3xl shadow-float">
-      {/* Branded top — flows into the form */}
-      <div className="hero-glow px-6 pt-10 pb-8 text-center text-white">
-        <div className="inline-flex items-center justify-center rounded-2xl bg-white/10 p-3 ring-1 ring-white/15">
-          <JobyLogo size={64} className="h-16 w-16 rounded-xl" />
-        </div>
-        <h1 className="mt-4 text-2xl font-extrabold tracking-tight">{title}</h1>
-        <p className="mt-1.5 text-sm text-white/70">{tagline}</p>
+    <div className="space-y-5">
+      <div className="flex justify-center">
+        <Image
+          src="/main-logo.png"
+          alt={t("app.name")}
+          width={180}
+          height={180}
+          priority
+          className="object-contain"
+        />
       </div>
+      <div className="overflow-hidden rounded-3xl shadow-float bg-surface">
+        {/* Branded top — flows into the form */}
+        <div className="px-6 pt-6 pb-2 text-center">
+          <h1 className="text-xl font-extrabold tracking-tight text-foreground">{title}</h1>
+          <p className="mt-1 text-sm text-foreground-secondary">{tagline}</p>
+        </div>
 
       {/* Form — continuous surface, no separate card */}
       <div className="bg-surface px-6 py-6">
@@ -297,6 +322,7 @@ export function LoginForm({ role }: { role?: AuthRole }) {
             {t("auth.register")}
           </Link>
         </p>
+      </div>
       </div>
     </div>
   );

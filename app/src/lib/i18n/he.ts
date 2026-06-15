@@ -384,6 +384,10 @@ const he = {
   "my_shifts.no_history": "אין היסטוריה",
   "my_shifts.confirmed_badge": "מאושר לך",
   "my_shifts.next_step_hint": "סרקו את קוד ה-QR כשתגיעו למשמרת",
+  "my_shifts.view_list": "רשימה",
+  "my_shifts.view_calendar": "לוח חודשי",
+  "my_shifts.calendar_no_shifts_day": "אין משמרות ביום זה",
+  "my_shifts.calendar_select_day": "הקישו על יום מסומן לפרטים",
 
   // Arrival / navigation (worker)
   "shift.arrival_details": "פרטי הגעה",

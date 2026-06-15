@@ -83,8 +83,6 @@ export default function EarningsPage() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <h1 className="text-xl font-extrabold text-foreground tracking-tight">{t("earnings.title")}</h1>
-
       <SegmentedControl
         value={range}
         onChange={setRange}

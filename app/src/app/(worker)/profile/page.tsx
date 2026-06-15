@@ -253,8 +253,6 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <h1 className="text-xl font-extrabold text-foreground tracking-tight">{t("nav.profile")}</h1>
-
       {/* Identity card */}
       <Card className="overflow-hidden">
         <div className="hero-glow px-5 pt-6 pb-5">
