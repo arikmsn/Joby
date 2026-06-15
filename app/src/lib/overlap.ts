@@ -7,21 +7,26 @@ import { applications, shifts } from "./schema";
 import { eq, and, notInArray, sql } from "drizzle-orm";
 import { TERMINAL_STATUSES } from "./constants";
 
+export interface OverlapResult {
+  id: string;
+  title: string;
+}
+
 /**
  * Check if a worker has any non-terminal applications for shifts
  * that overlap with the given time range.
- * Returns the overlapping shift title if found, null otherwise.
+ * Returns the overlapping shift's id and title if found, null otherwise.
  */
 export async function findOverlap(
   workerId: string,
   shiftStartAt: Date,
   shiftEndAt: Date,
   excludeShiftId?: string
-): Promise<string | null> {
+): Promise<OverlapResult | null> {
   const terminalStatuses = TERMINAL_STATUSES as string[];
 
   const overlapping = await db
-    .select({ title: shifts.title })
+    .select({ id: shifts.id, title: shifts.title })
     .from(applications)
     .innerJoin(shifts, eq(applications.shift_id, shifts.id))
     .where(
@@ -38,5 +43,5 @@ export async function findOverlap(
     )
     .limit(1);
 
-  return overlapping.length > 0 ? overlapping[0].title : null;
+  return overlapping.length > 0 ? overlapping[0] : null;
 }

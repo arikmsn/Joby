@@ -87,6 +87,7 @@ export const workerProfiles = pgTable("worker_profiles", {
   payout_account_number: varchar("payout_account_number", { length: 50 }),
   payout_account_holder: varchar("payout_account_holder", { length: 255 }),
   payout_details_completed_at: timestamp("payout_details_completed_at", { withTimezone: true }),
+  reminders_enabled: boolean("reminders_enabled").notNull().default(true),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 

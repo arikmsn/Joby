@@ -8,6 +8,7 @@ import { t } from "@/lib/i18n/he";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Sheet } from "@/components/ui/sheet";
 import { EmployerAvatar } from "@/components/ui/employer-avatar";
 import { CelebrationToast } from "@/components/ui/celebration-toast";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -132,6 +133,7 @@ export default function MyShiftsPage() {
   const [actionId, setActionId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [celebration, setCelebration] = useState<MyApplication | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<{ appId: string; late: boolean } | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -459,9 +461,7 @@ export default function MyShiftsPage() {
                       variant="ghost"
                       size="sm"
                       className="text-danger hover:text-danger hover:bg-danger/5 active:scale-[0.97]"
-                      onClick={() => {
-                        if (confirm(t("apply.cancel_confirm"))) handleAction(app.id);
-                      }}
+                      onClick={() => setCancelTarget({ appId: app.id, late: false })}
                       loading={actionId === app.id}
                     >
                       {t("apply.cancel")}
@@ -485,10 +485,7 @@ export default function MyShiftsPage() {
                         const hoursUntilStart =
                           (new Date(app.shift_start_at).getTime() - Date.now()) / (1000 * 60 * 60);
                         const isLate = hoursUntilStart <= Config.LATE_CANCEL_WINDOW_HOURS;
-                        const confirmMsg = isLate
-                          ? t("apply.cancel_late_confirm")
-                          : t("apply.cancel_confirm");
-                        if (confirm(confirmMsg)) handleAction(app.id);
+                        setCancelTarget({ appId: app.id, late: isLate });
                       }}
                       loading={actionId === app.id}
                     >
@@ -508,6 +505,46 @@ export default function MyShiftsPage() {
           })}
         </div>
       )}
+
+      <Sheet
+        open={!!cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        title={
+          cancelTarget?.late
+            ? t("apply.cancel_late_dialog_title")
+            : t("apply.cancel_dialog_title")
+        }
+      >
+        <div className="space-y-4 pb-2">
+          <p className="text-sm text-foreground-secondary">
+            {cancelTarget?.late
+              ? t("apply.cancel_late_confirm")
+              : t("apply.cancel_confirm")}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              className="flex-1"
+              onClick={() => setCancelTarget(null)}
+            >
+              {t("general.cancel")}
+            </Button>
+            <Button
+              variant="danger"
+              className="flex-1"
+              loading={!!cancelTarget && actionId === cancelTarget.appId}
+              onClick={() => {
+                if (!cancelTarget) return;
+                const appId = cancelTarget.appId;
+                setCancelTarget(null);
+                handleAction(appId);
+              }}
+            >
+              {t("apply.cancel")}
+            </Button>
+          </div>
+        </div>
+      </Sheet>
     </div>
   );
 }

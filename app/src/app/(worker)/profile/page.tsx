@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { OccupationPicker, type OccupationOption } from "@/components/ui/occupation-picker";
-import { User, MapPin, LogOut, Shield, Pencil, Car, Globe2, Banknote, Cake, Wallet, CheckCircle2, AlertCircle, Info, X } from "lucide-react";
+import { User, MapPin, LogOut, Shield, Pencil, Car, Globe2, Banknote, Cake, Wallet, CheckCircle2, AlertCircle, Info, X, UserPlus, Send, Bell } from "lucide-react";
 import type { WorkerProfile } from "@/lib/types";
 import { ISRAEL_CITIES, WORKER_LANGUAGES, LICENSE_TYPES, VEHICLE_TYPES } from "@/lib/constants";
 
@@ -45,6 +45,13 @@ export default function ProfilePage() {
   );
   const [bio, setBio] = useState<string>(workerProfile?.bio || "");
   const [savingDetails, setSavingDetails] = useState(false);
+
+  const [referPhone, setReferPhone] = useState("");
+  const [referSending, setReferSending] = useState(false);
+  const [referMsg, setReferMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const [remindersEnabled, setRemindersEnabled] = useState<boolean>(workerProfile?.reminders_enabled ?? true);
+  const [savingReminders, setSavingReminders] = useState(false);
 
   const [editingPayout, setEditingPayout] = useState(false);
   const [savingPayout, setSavingPayout] = useState(false);
@@ -129,6 +136,7 @@ export default function ProfilePage() {
     setMinPay(workerProfile?.min_pay != null ? String(workerProfile.min_pay) : "");
     setBirthYear(workerProfile?.date_of_birth ? String(new Date(workerProfile.date_of_birth).getFullYear()) : "");
     setBio(workerProfile?.bio || "");
+    setRemindersEnabled(workerProfile?.reminders_enabled ?? true);
   }, [
     workerProfile?.city,
     workerProfile?.preferred_cities,
@@ -140,6 +148,7 @@ export default function ProfilePage() {
     workerProfile?.min_pay,
     workerProfile?.date_of_birth,
     workerProfile?.bio,
+    workerProfile?.reminders_enabled,
   ]);
 
   const labelMap = new Map(occupations.map((o) => [o.key, o.label_he]));
@@ -193,6 +202,50 @@ export default function ProfilePage() {
       }
     } finally {
       setSavingDetails(false);
+    }
+  }
+
+  async function handleSendReferral() {
+    setReferMsg(null);
+    setReferSending(true);
+    try {
+      const res = await fetch("/api/workers/refer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ phone: referPhone }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setReferMsg({ type: "success", text: data.message || t("profile.refer_friend_success") });
+        setReferPhone("");
+      } else {
+        setReferMsg({ type: "error", text: data.message || t("profile.refer_friend_error") });
+      }
+    } catch {
+      setReferMsg({ type: "error", text: t("profile.refer_friend_error") });
+    } finally {
+      setReferSending(false);
+    }
+  }
+
+  async function handleToggleReminders(enabled: boolean) {
+    setRemindersEnabled(enabled);
+    setSavingReminders(true);
+    try {
+      await fetch("/api/workers/me", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reminders_enabled: enabled }),
+      });
+      await refreshUser();
+    } finally {
+      setSavingReminders(false);
     }
   }
 
@@ -671,6 +724,70 @@ export default function ProfilePage() {
             </motion.div>
           )}
         </AnimatePresence>
+      </Card>
+
+      {/* Reminders preference */}
+      <Card className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Bell className="h-5 w-5 text-foreground-tertiary shrink-0" />
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold text-foreground">{t("profile.reminders_title")}</h2>
+              <p className="text-xs text-foreground-secondary mt-0.5">{t("profile.reminders_sub")}</p>
+            </div>
+          </div>
+          <button
+            role="switch"
+            aria-checked={remindersEnabled}
+            aria-label={t("profile.reminders_enabled")}
+            disabled={savingReminders}
+            onClick={() => handleToggleReminders(!remindersEnabled)}
+            className={`relative shrink-0 inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-50 ${
+              remindersEnabled ? "bg-primary" : "bg-border"
+            }`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                remindersEnabled ? "-translate-x-0.5" : "-translate-x-5"
+              }`}
+            />
+          </button>
+        </div>
+      </Card>
+
+      {/* Refer a friend */}
+      <Card className="space-y-3">
+        <div className="flex items-center gap-2">
+          <UserPlus className="h-5 w-5 text-foreground-tertiary" />
+          <div>
+            <h2 className="text-sm font-bold text-foreground">{t("profile.refer_friend_title")}</h2>
+            <p className="text-xs text-foreground-secondary mt-0.5">{t("profile.refer_friend_sub")}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2" dir="ltr">
+          <input
+            type="tel"
+            value={referPhone}
+            onChange={(e) => setReferPhone(e.target.value)}
+            placeholder={t("profile.refer_friend_phone_placeholder")}
+            dir="rtl"
+            className="flex-1 rounded-[var(--radius)] border border-border bg-surface px-3.5 py-2.5 text-sm transition-colors duration-150 hover:border-foreground-tertiary/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          />
+          <Button
+            size="sm"
+            onClick={handleSendReferral}
+            loading={referSending}
+            disabled={!referPhone.trim()}
+          >
+            <Send className="h-4 w-4 ml-1.5" />
+            {t("profile.refer_friend_send")}
+          </Button>
+        </div>
+        {referMsg && (
+          <p className={`text-sm ${referMsg.type === "success" ? "text-success" : "text-danger"}`}>
+            {referMsg.text}
+          </p>
+        )}
       </Card>
 
       <Button

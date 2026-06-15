@@ -88,6 +88,7 @@ export default function ShiftDetailsPage() {
   const [applying, setApplying] = useState(false);
   const [applyMsg, setApplyMsg] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
+  const [overlapShiftId, setOverlapShiftId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token || !shiftId) return;
@@ -107,6 +108,7 @@ export default function ShiftDetailsPage() {
     if (!token) return;
     setApplying(true);
     setApplyMsg("");
+    setOverlapShiftId(null);
     try {
       const res = await fetch(`/api/shifts/${shiftId}/apply`, {
         method: "POST",
@@ -127,6 +129,9 @@ export default function ShiftDetailsPage() {
           const r = await fetch(`/api/shifts/${shiftId}`, { headers: { Authorization: `Bearer ${token}` } });
           const d = await r.json();
           if (d.shift) setShift(d.shift);
+        }
+        if (res.status === 409 && data.error === "OVERLAP" && data.overlap_shift_id) {
+          setOverlapShiftId(data.overlap_shift_id);
         }
       }
     } catch {
@@ -195,8 +200,6 @@ export default function ShiftDetailsPage() {
     return n % 1 === 0 ? n.toString() : n.toFixed(2);
   }
 
-  const spotsLeft = shift.workers_needed - shift.slots_filled;
-
   const preferredRoles = workerProfile?.experience_tags || [];
   const preferredCities = workerProfile?.preferred_cities || [];
   const fitReasons: { key: string; icon: React.ReactNode; label: string }[] = [];
@@ -255,26 +258,6 @@ export default function ShiftDetailsPage() {
             </div>
             <div className="text-sm text-foreground-tertiary mt-0.5">
               {shift.pay_type === "hourly" ? t("shift.per_hour") : t("shift.total")}
-            </div>
-          </div>
-          <div className="text-left">
-            <div
-              className={`text-sm font-semibold ${
-                spotsLeft > 0
-                  ? spotsLeft <= 1
-                    ? "text-warning"
-                    : "text-foreground"
-                  : "text-foreground-tertiary"
-              }`}
-            >
-              {spotsLeft > 0
-                ? spotsLeft === 1
-                  ? t("feed.spots_left_one")
-                  : `${spotsLeft} ${t("feed.spots_left")}`
-                : t("feed.full")}
-            </div>
-            <div className="text-xs text-foreground-tertiary mt-0.5">
-              {shift.slots_filled}/{shift.workers_needed} {t("shift.slots")}
             </div>
           </div>
         </div>
@@ -528,6 +511,15 @@ export default function ShiftDetailsPage() {
         )}
         {applyMsg && (
           <p className={`text-sm mt-2 text-center animate-fade-in ${shift.my_application ? "text-success" : "text-danger"}`}>{applyMsg}</p>
+        )}
+        {overlapShiftId && (
+          <Link
+            href={`/shifts/${overlapShiftId}`}
+            className="mt-2 flex items-center justify-center gap-1.5 rounded-xl bg-warning/10 px-3 py-2.5 text-sm font-semibold text-warning transition-all duration-150 active:scale-[0.98]"
+          >
+            <AlertTriangle className="h-4 w-4" />
+            {t("apply.overlap_title")} · {t("apply.overlap_cta")}
+          </Link>
         )}
       </div>
     </div>

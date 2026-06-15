@@ -35,6 +35,7 @@ export async function PATCH(req: NextRequest) {
   if (data.date_of_birth !== undefined) updates.date_of_birth = data.date_of_birth;
   if (data.onboarding_completed) updates.onboarding_completed_at = new Date();
   if (data.onboarding_skipped) updates.onboarding_skipped_at = new Date();
+  if (data.reminders_enabled !== undefined) updates.reminders_enabled = data.reminders_enabled;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(

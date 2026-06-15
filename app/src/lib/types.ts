@@ -75,6 +75,7 @@ export interface WorkerProfile {
   payout_account_number: string | null;
   payout_account_holder: string | null;
   payout_details_completed_at: string | null;
+  reminders_enabled: boolean;
   created_at: string;
 }
 

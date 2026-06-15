@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Briefcase, Clock, Wallet } from "lucide-react";
+import { Briefcase, Clock, Wallet, TrendingUp } from "lucide-react";
 
 type Range = "today" | "week" | "month";
 
@@ -28,6 +28,7 @@ interface EarningsData {
     shifts_completed: number;
     hours_worked: number;
     estimated_earnings: number;
+    expected_earnings: number;
   };
   shifts: EarningsShift[];
 }
@@ -96,8 +97,8 @@ export default function EarningsPage() {
 
       {loading || !data ? (
         <div className="space-y-4 animate-fade-in">
-          <div className="grid grid-cols-3 gap-2.5">
-            {Array.from({ length: 3 }).map((_, i) => (
+          <div className="grid grid-cols-2 gap-2.5">
+            {Array.from({ length: 4 }).map((_, i) => (
               <Card key={i} className="p-4">
                 <Skeleton className="h-9 w-9 rounded-xl mb-2" />
                 <Skeleton className="h-6 w-12 mb-1.5" />
@@ -122,13 +123,14 @@ export default function EarningsPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5">
             <StatCard label={t("earnings.shifts_completed")} value={data.totals.shifts_completed} icon={<Briefcase className="h-4 w-4 text-primary" />} />
             <StatCard label={t("earnings.hours_worked")} value={data.totals.hours_worked} icon={<Clock className="h-4 w-4 text-primary" />} />
-            <StatCard label={t("earnings.estimated_earnings")} value={`${t("general.currency")}${data.totals.estimated_earnings}`} icon={<Wallet className="h-4 w-4 text-primary" />} />
+            <StatCard label={t("earnings.completed_earnings")} value={`${t("general.currency")}${data.totals.estimated_earnings}`} icon={<Wallet className="h-4 w-4 text-primary" />} />
+            <StatCard label={t("earnings.expected_earnings")} value={`${t("general.currency")}${data.totals.expected_earnings}`} icon={<TrendingUp className="h-4 w-4 text-primary" />} />
           </div>
 
-          <p className="text-xs text-foreground-tertiary bg-background rounded-lg p-2.5">{t("earnings.estimate_disclaimer")}</p>
+          <p className="text-xs text-foreground-tertiary bg-background rounded-lg p-2.5">{t("earnings.expected_earnings_disclaimer")}</p>
 
           <Card>
             <CardContent className="pt-6">

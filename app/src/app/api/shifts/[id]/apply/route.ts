@@ -90,16 +90,20 @@ export async function POST(
   }
 
   // Check overlap
-  const overlapTitle = await findOverlap(
+  const overlap = await findOverlap(
     user.id,
     new Date(shift.start_at!),
     new Date(shift.end_at!),
     shiftId
   );
 
-  if (overlapTitle) {
+  if (overlap) {
     return NextResponse.json(
-      { error: "OVERLAP", message: `${t("apply.overlap")}: ${overlapTitle}` },
+      {
+        error: "OVERLAP",
+        message: `${t("apply.overlap")}: ${overlap.title}`,
+        overlap_shift_id: overlap.id,
+      },
       { status: 409 }
     );
   }

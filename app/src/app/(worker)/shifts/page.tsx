@@ -25,10 +25,12 @@ import {
   Wand2,
   Pencil,
   EyeOff,
+  Star,
 } from "lucide-react";
 
 const DISMISSED_KEY = "joby_dismissed_shifts";
 const OPENED_KEY = "joby_opened_shifts";
+const FAVORITES_KEY = "joby_favorite_shifts";
 
 function getDismissedIds(): Set<string> {
   try {
@@ -61,6 +63,24 @@ function markOpened(id: string) {
   try {
     localStorage.setItem(OPENED_KEY, JSON.stringify(Array.from(ids)));
   } catch { /* quota */ }
+}
+
+function getFavoriteIds(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]"));
+  } catch {
+    return new Set();
+  }
+}
+
+function toggleFavoriteId(id: string): Set<string> {
+  const ids = getFavoriteIds();
+  if (ids.has(id)) ids.delete(id);
+  else ids.add(id);
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(Array.from(ids)));
+  } catch { /* quota */ }
+  return ids;
 }
 
 interface FeedShift {
@@ -115,15 +135,17 @@ export default function WorkerShiftFeed() {
   const [dateTo, setDateTo] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [newCount, setNewCount] = useState(0);
-  const [activeTab, setActiveTab] = useState<"matched" | "all">("matched");
+  const [activeTab, setActiveTab] = useState<"matched" | "all" | "favorites">("matched");
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [openedIds, setOpenedIds] = useState<Set<string>>(new Set());
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [weeklyEarnings, setWeeklyEarnings] = useState<number | null>(null);
 
-  // Load dismissed/opened IDs from localStorage
+  // Load dismissed/opened/favorite IDs from localStorage
   useEffect(() => {
     setDismissedIds(getDismissedIds());
     setOpenedIds(getOpenedIds());
+    setFavoriteIds(getFavoriteIds());
   }, []);
 
   // Fetch actual weekly earnings for the hero
@@ -248,7 +270,13 @@ export default function WorkerShiftFeed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredShifts, hasPreferences, preferredRoles, preferredCities]);
 
-  const displayedShifts = activeTab === "matched" ? matchedShifts : filteredShifts;
+  const favoriteShifts = useMemo(
+    () => filteredShifts.filter((s) => favoriteIds.has(s.id)),
+    [filteredShifts, favoriteIds]
+  );
+
+  const displayedShifts =
+    activeTab === "matched" ? matchedShifts : activeTab === "favorites" ? favoriteShifts : filteredShifts;
 
   const activeFilterCount =
     roleFilters.length +
@@ -308,6 +336,12 @@ export default function WorkerShiftFeed() {
     setDismissedIds(getDismissedIds());
   }
 
+  function handleToggleFavorite(shiftId: string, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setFavoriteIds(toggleFavoriteId(shiftId));
+  }
+
   function handleOpen(shiftId: string) {
     markOpened(shiftId);
     setOpenedIds(getOpenedIds());
@@ -342,9 +376,9 @@ export default function WorkerShiftFeed() {
   }, [displayedShifts]);
 
   function ShiftRow({ shift }: { shift: FeedShift }) {
-    const spotsLeft = shift.workers_needed - shift.slots_filled;
     const soon = isStartingSoon(shift.start_at);
     const isUnopened = !openedIds.has(shift.id);
+    const isFavorite = favoriteIds.has(shift.id);
 
     const matchCount = (roleMatches(shift) ? 1 : 0) + (cityMatches(shift) ? 1 : 0) + (payMatches(shift) ? 1 : 0);
     const matchScore = hasPreferences ? Math.round((matchCount / 3) * 100) : 0;
@@ -379,9 +413,6 @@ export default function WorkerShiftFeed() {
                 <Sparkles className="h-3 w-3" />
                 {t("feed.badge_recommended")}
               </Badge>
-            )}
-            {spotsLeft === 1 && (
-              <Badge variant="warning">{t("feed.badge_urgent")}</Badge>
             )}
           </div>
 
@@ -437,23 +468,29 @@ export default function WorkerShiftFeed() {
             </div>
           )}
 
-          {/* Spots left */}
-          {spotsLeft >= 0 && spotsLeft !== 1 && (
-            <div className="mt-2.5 flex items-center gap-1.5 text-xs font-medium text-foreground-tertiary">
-              <span className={`h-1.5 w-1.5 rounded-full ${spotsLeft === 0 ? "bg-foreground-tertiary" : "bg-success"}`} />
-              {spotsLeft === 0 ? t("feed.full") : `${spotsLeft} ${t("feed.spots_left")}`}
-            </div>
-          )}
         </Link>
 
-        {/* Dismiss button */}
-        <button
-          onClick={(e) => handleDismiss(shift.id, e)}
-          className="absolute top-3 start-3 opacity-0 group-hover:opacity-100 focus:opacity-100 rounded-full p-1.5 bg-surface/90 border border-border text-foreground-tertiary hover:text-foreground hover:bg-surface transition-all duration-150 shadow-sm"
-          title={t("feed.dismiss_shift")}
-        >
-          <EyeOff className="h-3.5 w-3.5" />
-        </button>
+        {/* Card actions: favorite + hide */}
+        <div className="absolute top-3 end-3 flex items-center gap-1">
+          <button
+            onClick={(e) => handleToggleFavorite(shift.id, e)}
+            className={`rounded-full p-1.5 border transition-all duration-150 shadow-sm active:scale-90 ${
+              isFavorite
+                ? "bg-warning/10 border-warning/30 text-warning"
+                : "bg-surface/90 border-border text-foreground-tertiary opacity-70 hover:opacity-100 hover:text-warning"
+            }`}
+            title={isFavorite ? t("feed.unfavorite_shift") : t("feed.favorite_shift")}
+          >
+            <Star className={`h-3.5 w-3.5 ${isFavorite ? "fill-current" : ""}`} />
+          </button>
+          <button
+            onClick={(e) => handleDismiss(shift.id, e)}
+            className="rounded-full p-1.5 bg-surface/90 border border-border text-foreground-tertiary opacity-70 hover:opacity-100 hover:text-foreground hover:bg-surface transition-all duration-150 shadow-sm active:scale-90"
+            title={t("feed.dismiss_shift")}
+          >
+            <EyeOff className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
     );
   }
@@ -557,6 +594,7 @@ export default function WorkerShiftFeed() {
           options={[
             { value: "matched", label: t("feed.tab_matched") },
             { value: "all", label: t("feed.tab_all") },
+            { value: "favorites", label: t("feed.tab_favorites") },
           ]}
         />
         <button
@@ -724,18 +762,22 @@ export default function WorkerShiftFeed() {
       ) : !hasAnyResults ? (
         <div className="text-center py-20 px-4">
           <p className="font-semibold text-foreground">
-            {noMatchedPreferences
-              ? t("feed.no_matches_yet")
-              : activeFilterCount > 0
-                ? t("feed.no_match")
-                : t("feed.no_shifts")}
+            {activeTab === "favorites"
+              ? t("feed.no_favorites")
+              : noMatchedPreferences
+                ? t("feed.no_matches_yet")
+                : activeFilterCount > 0
+                  ? t("feed.no_match")
+                  : t("feed.no_shifts")}
           </p>
           <p className="text-sm text-foreground-secondary mt-1 max-w-xs mx-auto">
-            {noMatchedPreferences
-              ? t("feed.no_matches_yet_sub")
-              : activeFilterCount > 0
-                ? t("feed.no_match_sub")
-                : t("feed.no_shifts_sub")}
+            {activeTab === "favorites"
+              ? t("feed.no_favorites_sub")
+              : noMatchedPreferences
+                ? t("feed.no_matches_yet_sub")
+                : activeFilterCount > 0
+                  ? t("feed.no_match_sub")
+                  : t("feed.no_shifts_sub")}
           </p>
           {noMatchedPreferences ? (
             <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">

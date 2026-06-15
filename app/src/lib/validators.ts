@@ -208,6 +208,7 @@ export const updateWorkerMeSchema = z.object({
   date_of_birth: z.string().nullable().optional(),
   onboarding_completed: z.boolean().optional(),
   onboarding_skipped: z.boolean().optional(),
+  reminders_enabled: z.boolean().optional(),
 });
 
 export const updateEmployerMeSchema = z.object({
@@ -267,6 +268,14 @@ export const workerSearchByPhoneSchema = z.object({
 });
 
 export const inviteNewWorkerSchema = z.object({
+  phone: z
+    .string()
+    .min(9)
+    .max(15)
+    .regex(/^\+?[0-9]+$/, "מספר טלפון לא תקין"),
+});
+
+export const referFriendSchema = z.object({
   phone: z
     .string()
     .min(9)

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { Briefcase, ClipboardList, User, Bell, QrCode, Wallet } from "lucide-react";
+import { Briefcase, ClipboardList, User, Bell, Wallet } from "lucide-react";
 import { BottomNavLink } from "./nav-link";
 import { RoleMismatchBanner } from "./role-mismatch-banner";
 import { JobyLogo } from "@/components/ui/joby-logo";
@@ -89,11 +89,6 @@ export function WorkerLayout({ children }: { children: ReactNode }) {
             href="/my-shifts"
             icon={<ClipboardList className="h-5 w-5" />}
             label={t("nav.my_shifts")}
-          />
-          <BottomNavLink
-            href="/scan"
-            icon={<QrCode className="h-5 w-5" />}
-            label={t("qr.scan")}
           />
           <BottomNavLink
             href="/earnings"

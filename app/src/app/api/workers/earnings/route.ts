@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { applications, shifts, checkinEvents } from "@/lib/schema";
 import { eq, and, gte, lt, inArray } from "drizzle-orm";
-import { UserRole, PAYABLE_STATUSES } from "@/lib/constants";
+import { UserRole, PAYABLE_STATUSES, ApplicationStatus } from "@/lib/constants";
 import { reportRangeSchema } from "@/lib/validators";
 import { getRangeBounds, computeHours, computePay, type ReportRange } from "@/lib/reporting";
 
@@ -44,10 +44,43 @@ export async function GET(req: NextRequest) {
 
   const round2 = (n: number) => Math.round(n * 100) / 100;
 
+  // Expected earnings: approved/confirmed/checked-in (not yet completed) shifts
+  // in this range, valued at their scheduled hours. Gives a forward-looking
+  // estimate alongside the completed-earnings figure.
+  const upcomingApps = await db
+    .select({
+      pay_rate: shifts.pay_rate,
+      pay_type: shifts.pay_type,
+      start_at: shifts.start_at,
+      end_at: shifts.end_at,
+    })
+    .from(applications)
+    .innerJoin(shifts, eq(applications.shift_id, shifts.id))
+    .where(
+      and(
+        eq(applications.worker_id, user.id),
+        inArray(applications.status, [
+          ApplicationStatus.APPROVED,
+          ApplicationStatus.CONFIRMED,
+          ApplicationStatus.CHECKED_IN,
+        ]),
+        eq(applications.is_backup, false),
+        gte(shifts.start_at, start),
+        lt(shifts.start_at, end)
+      )
+    );
+
+  let expectedEarnings = 0;
+  for (const a of upcomingApps) {
+    const hours = computeHours(null, null, new Date(a.start_at), new Date(a.end_at));
+    expectedEarnings += computePay(hours, Number(a.pay_rate), a.pay_type);
+  }
+  expectedEarnings = round2(expectedEarnings);
+
   if (completedApps.length === 0) {
     return NextResponse.json({
       range,
-      totals: { shifts_completed: 0, hours_worked: 0, estimated_earnings: 0 },
+      totals: { shifts_completed: 0, hours_worked: 0, estimated_earnings: 0, expected_earnings: expectedEarnings },
       shifts: [],
     });
   }
@@ -98,6 +131,7 @@ export async function GET(req: NextRequest) {
       shifts_completed: completedApps.length,
       hours_worked: round2(totalHours),
       estimated_earnings: round2(totalEarnings),
+      expected_earnings: expectedEarnings,
     },
     shifts: shiftRows,
   });

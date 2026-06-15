@@ -175,7 +175,7 @@ const he = {
   "feed.tab_all": "כל האפשרויות",
   "feed.match_role": "מתאים לתפקיד שבחרת",
   "feed.match_city": "באזור שבחרת",
-  "feed.match_pay": "תואם לשכר המינימום שהגדרת",
+  "feed.match_pay": "תואם לשכר שהגדרת",
   "feed.no_matches_yet": "עדיין אין משמרות שמתאימות להעדפות שלך",
   "feed.no_matches_yet_sub": "הגדר תפקידים ואזורים מועדפים בפרופיל, או עבור לכל האפשרויות",
   "feed.go_to_all": "כל האפשרויות",
@@ -621,6 +621,7 @@ const he = {
   "earnings.shifts_completed": "משמרות שהושלמו",
   "earnings.hours_worked": "שעות עבודה",
   "earnings.estimated_earnings": "הכנסה משוערת",
+  "earnings.completed_label": "הושלם",
   "earnings.shift_breakdown": "פירוט משמרות",
   "earnings.no_shifts": "אין משמרות שהושלמו לתקופה זו",
   "earnings.estimate_disclaimer": "הסכומים המוצגים הם הערכה תפעולית בלבד ואינם מהווים תלוש שכר או אישור תשלום סופי",
@@ -697,6 +698,48 @@ const he = {
   "shift.requirements_ack_placeholder": "לדוגמה: קראתי והבנתי את דרישות התפקיד ואני מאשר/ת שאני עומד/ת בהן",
   "application.pending_title": "ממתין/ה לאישור המעסיק",
   "application.pending_sub": "נעדכן אותך כשהמעסיק יגיב לבקשה",
+
+  // --- Worker final polish sprint ---
+  // Earnings
+  "earnings.completed_earnings": "הושלם בתקופה זו",
+  "earnings.expected_earnings": "צפי המשך התקופה",
+  "earnings.expected_earnings_disclaimer": "\"הושלם\" משקף משמרות שכבר הסתיימו (ללא קשר למועד התשלום בפועל). \"צפי המשך התקופה\" הוא אומדן למשמרות מאושרות שעדיין מתוכננות, ועשוי להשתנות.",
+
+  // Overlap navigation
+  "apply.overlap_title": "יש לך משמרת חופפת",
+  "apply.overlap_cta": "מעבר למשמרת החופפת",
+
+  // Refer a friend
+  "profile.refer_friend_title": "הזמן/י חבר/ה ל-Joby",
+  "profile.refer_friend_sub": "שלח/י הזמנה ב-WhatsApp לחבר/ה ותעזור/י לו/לה למצוא עבודה כבר היום",
+  "profile.refer_friend_phone_placeholder": "מספר טלפון של החבר/ה",
+  "profile.refer_friend_send": "שליחת הזמנה",
+  "profile.refer_friend_success": "ההזמנה נשלחה ב-WhatsApp",
+  "profile.refer_friend_error": "שליחת ההזמנה נכשלה. נסה/י שוב",
+  "profile.refer_friend_invalid_phone": "מספר טלפון לא תקין",
+  "notification.refer_friend.whatsapp": "היי, {name} מזמין/ה אותך להצטרף ל-Joby ולמצוא עבודה כבר היום: {link}",
+
+  // Shift reminders preference
+  "profile.reminders_title": "תזכורות משמרת",
+  "profile.reminders_sub": "תזכורת ב-WhatsApp ובאפליקציה לפני תחילת המשמרת ובסיומה, כדי לא לפספס סריקת QR",
+  "profile.reminders_enabled": "תזכורות פעילות",
+  "notification.shift_reminder_start.title": "המשמרת שלך מתחילה בקרוב",
+  "notification.shift_reminder_start.body": "המשמרת \"{title}\" מתחילה בעוד {minutes} דקות. אל תשכח/י לסרוק את קוד ה-QR בכניסה.",
+  "notification.shift_reminder_start.whatsapp": "תזכורת: המשמרת \"{title}\" מתחילה בעוד {minutes} דקות. סרקו את קוד ה-QR בכניסה: https://joby-opal.vercel.app/scan",
+  "notification.shift_reminder_end.title": "המשמרת שלך מסתיימת בקרוב",
+  "notification.shift_reminder_end.body": "המשמרת \"{title}\" מסתיימת בקרוב. אל תשכח/י לסרוק את קוד ה-QR ביציאה.",
+  "notification.shift_reminder_end.whatsapp": "תזכורת: המשמרת \"{title}\" מסתיימת בקרוב. סרקו את קוד ה-QR ביציאה: https://joby-opal.vercel.app/scan",
+
+  // Cancel confirmation dialog
+  "apply.cancel_dialog_title": "ביטול מועמדות",
+  "apply.cancel_late_dialog_title": "ביטול מאוחר",
+
+  // Favorites
+  "feed.favorite_shift": "שמירה למועדפים",
+  "feed.unfavorite_shift": "הסרה מהמועדפים",
+  "feed.tab_favorites": "שמורות",
+  "feed.no_favorites": "אין משרות שמורות",
+  "feed.no_favorites_sub": "סמן/י כוכב על משרה כדי לשמור אותה לכאן לצפייה מהירה",
 } as const;
 
 export type TranslationKey = keyof typeof he;
