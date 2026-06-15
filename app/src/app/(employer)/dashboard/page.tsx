@@ -7,12 +7,12 @@ import { t } from "@/lib/i18n/he";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton, ShiftListSkeleton } from "@/components/ui/skeleton";
+import { StaffingBadges } from "@/components/ui/staffing-summary";
 import Link from "next/link";
 import {
   CalendarDays,
   Clock,
   MapPin,
-  Users,
   Plus,
   TrendingUp,
   FileEdit,
@@ -94,9 +94,6 @@ function statusLabel(status: string) {
 
 function ShiftRow({ shift }: { shift: DashboardShift }) {
   const { occupationLabel } = useOccupations();
-  const fillPercent = shift.workers_needed > 0
-    ? Math.round((shift.slots_filled / shift.workers_needed) * 100)
-    : 0;
 
   return (
     <Link
@@ -124,41 +121,21 @@ function ShiftRow({ shift }: { shift: DashboardShift }) {
             {shift.city}
           </span>
         )}
-        <span className="flex items-center gap-1">
-          <Users className="h-3.5 w-3.5" />
-          <span className={fillPercent === 100 ? "text-success font-medium" : ""}>
-            {shift.slots_filled}/{shift.workers_needed}
-          </span>
-        </span>
       </div>
 
-      {shift.workers_needed > 0 && (
-        <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all ${
-              fillPercent === 100 ? "bg-success" : fillPercent > 50 ? "bg-primary" : "bg-warning"
-            }`}
-            style={{ width: `${fillPercent}%` }}
+      {(shift.status === "PUBLISHED" || shift.status === "IN_PROGRESS") && (
+        <div className="mt-2">
+          <StaffingBadges
+            counts={{
+              workers_needed: shift.workers_needed,
+              slots_filled: shift.slots_filled,
+              pending_count: shift.applicants?.pending_count || 0,
+              backup_count: shift.applicants?.backup_count || 0,
+            }}
+            startAt={shift.start_at}
           />
         </div>
       )}
-
-      {(shift.applicants?.pending_count || shift.applicants?.backup_count) ? (
-        <div className="flex items-center gap-2 mt-2">
-          {!!shift.applicants?.pending_count && (
-            <Badge variant="warning">
-              {shift.applicants.pending_count}{" "}
-              {shift.applicants.pending_count === 1 ? t("applicants.pending_one") : t("applicants.pending_many")}
-            </Badge>
-          )}
-          {!!shift.applicants?.backup_count && (
-            <Badge variant="info">
-              {shift.applicants.backup_count}{" "}
-              {shift.applicants.backup_count === 1 ? t("applicants.backup_count_one") : t("applicants.backup_count_many")}
-            </Badge>
-          )}
-        </div>
-      ) : null}
     </Link>
   );
 }

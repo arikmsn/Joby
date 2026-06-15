@@ -6,6 +6,7 @@ import { useOccupations } from "@/lib/use-occupations";
 import { t } from "@/lib/i18n/he";
 import { Badge } from "@/components/ui/badge";
 import { ShiftListSkeleton } from "@/components/ui/skeleton";
+import { StaffingBadges } from "@/components/ui/staffing-summary";
 import Link from "next/link";
 import { Plus, Clock, MapPin, Users, CalendarDays } from "lucide-react";
 
@@ -54,16 +55,6 @@ function dayLabel(iso: string) {
   if (diffDays === 0) return t("shift.day_today");
   if (diffDays === 1) return t("shift.day_tomorrow");
   return d.toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long" });
-}
-
-function fillStatus(slotsFilled: number, workersNeeded: number) {
-  if (slotsFilled >= workersNeeded) {
-    return { label: t("shift.fill_status.filled"), variant: "success" as const };
-  }
-  if (slotsFilled > 0) {
-    return { label: t("shift.fill_status.partial"), variant: "warning" as const };
-  }
-  return { label: t("shift.fill_status.none"), variant: "danger" as const };
 }
 
 export default function EmployerShiftsPage() {
@@ -150,11 +141,6 @@ export default function EmployerShiftsPage() {
                         <Badge variant={statusVariant(s.status)}>
                           {statusLabel(s.status)}
                         </Badge>
-                        {(s.status === "PUBLISHED" || s.status === "IN_PROGRESS") && (
-                          <Badge variant={fillStatus(s.slots_filled, s.workers_needed).variant}>
-                            {fillStatus(s.slots_filled, s.workers_needed).label}
-                          </Badge>
-                        )}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-foreground-secondary">
@@ -183,31 +169,30 @@ export default function EmployerShiftsPage() {
                           {s.city}
                         </span>
                       )}
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3.5 w-3.5" />
-                        {s.slots_filled}/{s.workers_needed}
-                      </span>
+                      {s.status !== "PUBLISHED" && s.status !== "IN_PROGRESS" && (
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3.5 w-3.5" />
+                          {s.slots_filled}/{s.workers_needed}
+                        </span>
+                      )}
                       <span className="font-medium text-foreground">
                         {t("general.currency")}
                         {s.pay_rate}
                       </span>
                     </div>
-                    {(s.applicants?.pending_count || s.applicants?.backup_count) ? (
-                      <div className="flex items-center gap-2 mt-2">
-                        {!!s.applicants?.pending_count && (
-                          <Badge variant="warning">
-                            {s.applicants.pending_count}{" "}
-                            {s.applicants.pending_count === 1 ? t("applicants.pending_one") : t("applicants.pending_many")}
-                          </Badge>
-                        )}
-                        {!!s.applicants?.backup_count && (
-                          <Badge variant="info">
-                            {s.applicants.backup_count}{" "}
-                            {s.applicants.backup_count === 1 ? t("applicants.backup_count_one") : t("applicants.backup_count_many")}
-                          </Badge>
-                        )}
+                    {(s.status === "PUBLISHED" || s.status === "IN_PROGRESS") && (
+                      <div className="mt-2">
+                        <StaffingBadges
+                          counts={{
+                            workers_needed: s.workers_needed,
+                            slots_filled: s.slots_filled,
+                            pending_count: s.applicants?.pending_count || 0,
+                            backup_count: s.applicants?.backup_count || 0,
+                          }}
+                          startAt={s.start_at}
+                        />
                       </div>
-                    ) : null}
+                    )}
                   </Link>
                 ))}
               </div>

@@ -12,6 +12,10 @@ import { TimeSelect } from "@/components/ui/time-select";
 import { Badge } from "@/components/ui/badge";
 import { TrustBadge } from "@/components/ui/trust-badge";
 import { Collapsible } from "@/components/ui/collapsible";
+import { EmployerAvatar } from "@/components/ui/employer-avatar";
+import { StaffingBadges } from "@/components/ui/staffing-summary";
+import { History } from "lucide-react";
+import { cn } from "@/lib/cn";
 import Link from "next/link";
 
 const INACTIVE_APPLICANT_STATUSES = ["REJECTED", "CANCELLED_BY_WORKER", "CANCELLED_BY_SYSTEM", "NO_SHOW"];
@@ -42,6 +46,8 @@ interface Applicant {
   worker_phone: string;
   worker_city: string | null;
   worker_trust: string | null;
+  worked_before_count: number;
+  recommendation_reasons: string[];
 }
 
 export default function EditShiftPage() {
@@ -56,7 +62,6 @@ export default function EditShiftPage() {
   const [shift, setShift] = useState<Record<string, unknown> | null>(null);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [knownWorkers, setKnownWorkers] = useState<Map<string, number>>(new Map());
   const [form, setForm] = useState({
     title: "", role_tag: "", description: "", location_name: "", city: "", address: "",
     date: "", start_time: "", end_time: "", pay_rate: "", pay_type: "hourly", workers_needed: "1",
@@ -114,18 +119,6 @@ export default function EditShiftPage() {
       .catch(() => { setError(t("error.generic")); setLoading(false); });
     fetchApplicants();
   }, [token, shiftId, fetchApplicants]);
-
-  useEffect(() => {
-    if (!token) return;
-    fetch("/api/employers/known-workers", { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.json())
-      .then((d) => {
-        const map = new Map<string, number>();
-        for (const w of d.workers || []) map.set(w.worker_id, w.times_worked);
-        setKnownWorkers(map);
-      })
-      .catch(() => {});
-  }, [token]);
 
   const activeApplicants = applicants.filter((a) => !INACTIVE_APPLICANT_STATUSES.includes(a.status));
   const inactiveApplicants = applicants.filter((a) => INACTIVE_APPLICANT_STATUSES.includes(a.status));
@@ -312,11 +305,19 @@ export default function EditShiftPage() {
       {(isPublished || shift.status === "IN_PROGRESS") && (
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold text-foreground">{t("applicants.title")}</h2>
-              <span className="text-sm text-foreground-tertiary">
-                {(shift.slots_filled as number)}/{(shift.workers_needed as number)} {t("shift.slots")}
-              </span>
+            </div>
+            <div className="mb-4">
+              <StaffingBadges
+                counts={{
+                  workers_needed: shift.workers_needed as number,
+                  slots_filled: shift.slots_filled as number,
+                  pending_count: activeApplicants.filter((a) => a.status === "PENDING").length,
+                  backup_count: activeApplicants.filter((a) => a.status === "APPROVED" && a.is_backup).length,
+                }}
+                startAt={shift.start_at as string}
+              />
             </div>
 
             {applicants.length === 0 ? (
@@ -328,49 +329,12 @@ export default function EditShiftPage() {
                 ) : (
                   <div className="space-y-3">
                     {activeApplicants.map((app) => (
-                      <div key={app.id} className="flex items-center justify-between border border-border rounded-xl p-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-foreground">{app.worker_name}</span>
-                            <AppStatusBadge status={app.status} isBackup={app.is_backup} />
-                            {app.worker_trust && <TrustBadge score={app.worker_trust} />}
-                            {knownWorkers.has(app.worker_id) && (
-                              <Badge variant="info">{t("known_workers.worked_before")}</Badge>
-                            )}
-                          </div>
-                          <div className="text-sm text-foreground-tertiary mt-0.5">
-                            {app.worker_phone} {app.worker_city && `· ${app.worker_city}`}
-                          </div>
-                        </div>
-
-                        {app.status === "PENDING" && (
-                          <div className="flex gap-2 shrink-0">
-                            <Button
-                              size="sm"
-                              onClick={() => handleApplicantAction(app.id, "APPROVED", false)}
-                              loading={actionLoading === app.id}
-                            >
-                              {t("applicants.approve_active")}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => handleApplicantAction(app.id, "APPROVED", true)}
-                              loading={actionLoading === app.id}
-                            >
-                              {t("applicants.approve_backup")}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="danger"
-                              onClick={() => handleApplicantAction(app.id, "REJECTED", false)}
-                              loading={actionLoading === app.id}
-                            >
-                              {t("applicants.reject")}
-                            </Button>
-                          </div>
-                        )}
-                      </div>
+                      <ApplicantCard
+                        key={app.id}
+                        app={app}
+                        actionLoading={actionLoading}
+                        onAction={handleApplicantAction}
+                      />
                     ))}
                   </div>
                 )}
@@ -382,18 +346,7 @@ export default function EditShiftPage() {
                   >
                     <div className="space-y-3 mt-3">
                       {inactiveApplicants.map((app) => (
-                        <div key={app.id} className="flex items-center justify-between border border-border-light rounded-xl p-3 opacity-70 transition-opacity hover:opacity-90">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-foreground">{app.worker_name}</span>
-                              <AppStatusBadge status={app.status} isBackup={app.is_backup} />
-                              {app.worker_trust && <TrustBadge score={app.worker_trust} />}
-                            </div>
-                            <div className="text-sm text-foreground-tertiary mt-0.5">
-                              {app.worker_phone} {app.worker_city && `· ${app.worker_city}`}
-                            </div>
-                          </div>
-                        </div>
+                        <ApplicantCard key={app.id} app={app} actionLoading={null} onAction={async () => {}} inactive />
                       ))}
                     </div>
                   </Collapsible>
@@ -417,4 +370,91 @@ function AppStatusBadge({ status, isBackup }: { status: string; isBackup: boolea
   };
    const m = map[status] || { label: status, variant: "muted" as const };
   return <Badge variant={m.variant}>{m.label}</Badge>;
+}
+
+function ApplicantCard({
+  app,
+  actionLoading,
+  onAction,
+  inactive,
+}: {
+  app: Applicant;
+  actionLoading: string | null;
+  onAction: (appId: string, status: string, isBackup: boolean) => Promise<void>;
+  inactive?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border p-3 transition-opacity",
+        inactive ? "border-border-light opacity-70 hover:opacity-90" : "border-border"
+      )}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="flex items-start gap-2.5 min-w-0">
+          <EmployerAvatar name={app.worker_name} size="sm" className="mt-0.5" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-foreground">{app.worker_name}</span>
+              <AppStatusBadge status={app.status} isBackup={app.is_backup} />
+              {app.worker_trust && <TrustBadge score={app.worker_trust} />}
+            </div>
+            <div className="text-sm text-foreground-tertiary mt-0.5">
+              {app.worker_phone} {app.worker_city && `· ${app.worker_city}`}
+            </div>
+            {app.worked_before_count > 0 && (
+              <div className="mt-1.5">
+                <Badge variant="success">
+                  <History className="h-3 w-3" />
+                  {app.worked_before_count === 1
+                    ? t("applicants.worked_before_count_one")
+                    : t("applicants.worked_before_count").replace("{count}", String(app.worked_before_count))}
+                </Badge>
+              </div>
+            )}
+            {app.recommendation_reasons.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                {app.recommendation_reasons.map((reason) => (
+                  <span
+                    key={reason}
+                    className="text-[11px] font-medium text-foreground-secondary bg-background rounded-full px-2 py-0.5 border border-border-light"
+                  >
+                    {reason}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {app.status === "PENDING" && (
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button
+              size="sm"
+              onClick={() => onAction(app.id, "APPROVED", false)}
+              loading={actionLoading === app.id}
+            >
+              {t("applicants.approve_active")}
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => onAction(app.id, "APPROVED", true)}
+              loading={actionLoading === app.id}
+            >
+              {t("applicants.approve_backup")}
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => onAction(app.id, "REJECTED", false)}
+              loading={actionLoading === app.id}
+            >
+              {t("applicants.reject")}
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

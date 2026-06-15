@@ -374,6 +374,23 @@ const he = {
   "applicants.backup_count_many": "גיבויים",
   "applicants.inactive_title": "מועמדים לא פעילים",
 
+  "applicants.reason.worked_before": "עבד/ה איתך בעבר",
+  "applicants.reason.matches_role": "מתאים/ה לתפקיד הנדרש",
+  "applicants.reason.same_city": "באזור הרלוונטי",
+  "applicants.reason.high_trust": "ציון אמינות גבוה",
+  "applicants.reason.completed_similar": "השלים/ה משמרות דומות בעבר",
+  "applicants.worked_before_count_one": "עבד/ה איתך פעם אחת",
+  "applicants.worked_before_count": "עבד/ה איתך {count} פעמים",
+
+  "staffing.approved": "מאושרים",
+  "staffing.needed": "נדרשים",
+  "staffing.pending": "ממתינים",
+  "staffing.backup": "גיבוי",
+  "staffing.covered": "מאויש במלואו",
+  "staffing.partial": "באיוש חלקי",
+  "staffing.at_risk": "בסיכון — לא מאויש",
+  "staffing.unfilled": "לא מאויש",
+
   "my_shifts.title": "המשמרות שלי",
   "my_shifts.subtitle": "כל המשמרות שלך במקום אחד — מאושרות, ממתינות ועברו",
   "my_shifts.tab_pending": "ממתינות",
