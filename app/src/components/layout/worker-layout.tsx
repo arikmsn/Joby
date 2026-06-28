@@ -78,7 +78,7 @@ export function WorkerLayout({ children }: { children: ReactNode }) {
 
       <RoleMismatchBanner />
 
-      <main className="flex-1 overflow-y-auto px-4 py-4 pb-24 max-w-lg mx-auto w-full">
+      <main className="flex-1 overflow-y-auto px-4 py-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] max-w-lg mx-auto w-full">
         {children}
       </main>
 

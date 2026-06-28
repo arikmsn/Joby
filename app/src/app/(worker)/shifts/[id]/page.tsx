@@ -416,7 +416,7 @@ export default function ShiftDetailsPage() {
       <div className="h-1" aria-hidden="true" />
 
       {/* Apply section */}
-      <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] -mx-4 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-surface border-t border-border shadow-[0_-2px_12px_-1px_rgb(0_0_0_/_0.04)] space-y-2">
+      <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] -mx-4 px-4 pt-3 pb-3 bg-surface border-t border-border shadow-[0_-2px_12px_-1px_rgb(0_0_0_/_0.04)] space-y-2">
         {shift.my_application && shift.my_application.status === "CANCELLED_BY_WORKER" &&
         shift.status === "PUBLISHED" && new Date(shift.start_at) > new Date() ? (
           <>

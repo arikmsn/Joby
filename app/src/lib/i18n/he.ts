@@ -559,6 +559,10 @@ const he = {
   "onboarding.incomplete_cities": "עדיין לא בחרת אזורים — נוסיף אותם כדי להציג לך משמרות קרובות אליך",
   "onboarding.incomplete_preferences": "עדיין לא הגדרת שכר מינימום ושפות — נוסיף אותם להתאמה מדויקת יותר",
   "onboarding.preview_title": "כמה משמרות שכבר מתאימות לך",
+  "onboarding.jobs_for_selection": "כרגע יש {count} משרות שמתאימות לבחירה הזאת",
+  "onboarding.jobs_for_selection_one": "כרגע יש משרה אחת שמתאימה לבחירה הזאת",
+  "onboarding.add_more_hint": "הוספת עוד תחום יכולה לפתוח עוד {count} משרות רלוונטיות",
+  "onboarding.total_matched": "{count} משרות מתאימות לבחירה שלך",
 
   // --- Known Workers / Workers (Sprint 6 + Workers evolution) ---
   "known_workers.title": "עובדים",

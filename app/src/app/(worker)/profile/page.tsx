@@ -274,7 +274,7 @@ export default function ProfilePage() {
         {workerProfile && (
           <div className="p-5 space-y-4">
             {/* Stats grid */}
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               <div className="text-center p-3 bg-background rounded-xl">
                 <div className="text-lg font-bold text-foreground tabular-nums">
                   {workerProfile.total_shifts || 0}

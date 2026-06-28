@@ -50,7 +50,7 @@ export function Sheet({ open, onClose, title, children, className }: SheetProps)
             role="dialog"
             aria-modal="true"
             className={cn(
-              "relative z-10 max-h-[85vh] w-full max-w-lg mx-auto overflow-y-auto rounded-t-2xl bg-surface shadow-float",
+              "relative z-10 max-h-[85dvh] w-full max-w-lg mx-auto overflow-y-auto rounded-t-2xl bg-surface shadow-float",
               className
             )}
             initial={{ y: "100%" }}

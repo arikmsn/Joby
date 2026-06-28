@@ -117,7 +117,7 @@ export function EmployerLayout({ children }: { children: ReactNode }) {
               </div>
             </div>
             {employerProfile && (
-              <span className="text-sm text-foreground-secondary truncate max-w-[150px]">
+              <span className="text-sm text-foreground-secondary truncate max-w-[120px] sm:max-w-[200px]">
                 {employerProfile.business_name}
               </span>
             )}

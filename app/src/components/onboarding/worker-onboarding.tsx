@@ -59,9 +59,52 @@ export function WorkerOnboarding({ onClose, initialStep }: WorkerOnboardingProps
   const licenseTypeOptions: OccupationOption[] = LICENSE_TYPES.map((l) => ({ key: l.key, label_he: l.label_he }));
   const vehicleTypeOptions: OccupationOption[] = VEHICLE_TYPES.map((v) => ({ key: v.key, label_he: v.label_he }));
 
+  const [shiftCounts, setShiftCounts] = useState<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    fetch("/api/occupations?counts=1")
+      .then((res) => res.json())
+      .then((data) => {
+        const map = new Map<string, number>();
+        for (const o of data.occupations || []) {
+          if (o.open_shifts) map.set(o.key, o.open_shifts);
+        }
+        setShiftCounts(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  const totalMatchedShifts = useMemo(() => {
+    let total = 0;
+    const counted = new Set<string>();
+    for (const key of roleFilters) {
+      const c = shiftCounts.get(key) || 0;
+      if (c > 0 && !counted.has(key)) { total += c; counted.add(key); }
+    }
+    return total;
+  }, [roleFilters, shiftCounts]);
+
+  const bestAdditionalRole = useMemo((): { key: string; count: number } | null => {
+    if (shiftCounts.size === 0) return null;
+    let best: { key: string; count: number } | null = null;
+    const entries = Array.from(shiftCounts.entries());
+    for (let i = 0; i < entries.length; i++) {
+      const key = entries[i][0];
+      const count = entries[i][1];
+      if (roleFilters.includes(key)) continue;
+      if (count > 0 && (!best || count > best.count)) best = { key, count };
+    }
+    return best;
+  }, [roleFilters, shiftCounts]);
+
   const sortedOccupations = useMemo(
-    () => [...occupations].sort((a, b) => a.label_he.localeCompare(b.label_he, "he")),
-    [occupations]
+    () => [...occupations].sort((a, b) => {
+      const ca = shiftCounts.get(a.key) || 0;
+      const cb = shiftCounts.get(b.key) || 0;
+      if (cb !== ca) return cb - ca;
+      return a.label_he.localeCompare(b.label_he, "he");
+    }),
+    [occupations, shiftCounts]
   );
   const filteredRoleOptions = useMemo(() => {
     if (!roleSearch.trim()) return sortedOccupations;
@@ -314,12 +357,23 @@ export function WorkerOnboarding({ onClose, initialStep }: WorkerOnboardingProps
                 })}
               </div>
             )}
+            {roleFilters.length > 0 && totalMatchedShifts > 0 && (
+              <div className="rounded-lg bg-success/10 border border-success/20 px-3 py-2 text-sm text-success font-medium">
+                {t("onboarding.total_matched").replace("{count}", String(totalMatchedShifts))}
+              </div>
+            )}
+            {roleFilters.length > 0 && bestAdditionalRole && bestAdditionalRole.count > 0 && (
+              <p className="text-xs text-foreground-secondary">
+                {t("onboarding.add_more_hint").replace("{count}", String(bestAdditionalRole.count))}
+              </p>
+            )}
             <div className="max-h-72 overflow-y-auto rounded-lg border border-border-light divide-y divide-border-light">
               {filteredRoleOptions.length === 0 ? (
                 <p className="text-sm text-foreground-tertiary text-center py-3">{t("feed.no_match")}</p>
               ) : (
                 filteredRoleOptions.map((opt) => {
                   const selected = roleFilters.includes(opt.key);
+                  const count = shiftCounts.get(opt.key) || 0;
                   return (
                     <button
                       key={opt.key}
@@ -328,8 +382,15 @@ export function WorkerOnboarding({ onClose, initialStep }: WorkerOnboardingProps
                         selected ? "bg-primary/5 text-primary font-medium" : "text-foreground-secondary hover:bg-background"
                       }`}
                     >
-                      {opt.label_he}
-                      {selected && <span className="text-primary">✓</span>}
+                      <span>{opt.label_he}</span>
+                      <span className="flex items-center gap-2">
+                        {count > 0 && (
+                          <span className={`text-xs tabular-nums ${selected ? "text-primary/70" : "text-foreground-tertiary"}`}>
+                            {count} {count === 1 ? "משרה" : "משרות"}
+                          </span>
+                        )}
+                        {selected && <span className="text-primary">✓</span>}
+                      </span>
                     </button>
                   );
                 })

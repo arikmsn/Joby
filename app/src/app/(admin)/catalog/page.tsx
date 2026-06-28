@@ -132,7 +132,7 @@ export default function AdminCatalogPage() {
               </div>
               <Badge variant="muted" className="font-mono" dir="ltr">{occ.key}</Badge>
               <input
-                className="flex-1 min-w-[160px] rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                className="flex-1 min-w-0 rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                 value={labelEdits[occ.id] ?? occ.label_he}
                 onChange={(e) => setLabelEdits((prev) => ({ ...prev, [occ.id]: e.target.value }))}
               />

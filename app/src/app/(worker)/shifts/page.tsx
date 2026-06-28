@@ -675,7 +675,7 @@ export default function WorkerShiftFeed() {
           </div>
           <div className="flex flex-wrap gap-2">
             <select
-              className="flex-1 min-w-[120px] rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-shadow"
+              className="flex-1 min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-shadow"
               value={cityFilter}
               onChange={(e) => setCityFilter(e.target.value)}
             >
@@ -691,7 +691,7 @@ export default function WorkerShiftFeed() {
               value={businessSearch}
               onChange={(e) => setBusinessSearch(e.target.value)}
               placeholder={t("feed.search_business")}
-              className="flex-1 min-w-[120px] rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-shadow"
+              className="flex-1 min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-shadow"
             />
           </div>
           <div>

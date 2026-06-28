@@ -116,17 +116,17 @@ export default function AdminReportsPage() {
               {data.by_employer.length === 0 ? (
                 <p className="text-sm text-foreground-tertiary text-center py-4">{t("admin.reports.no_data")}</p>
               ) : (
-                <div className="space-y-2 overflow-x-auto">
+                <div className="space-y-2">
                   {data.by_employer.map((e) => (
-                    <div key={e.employer_id} className="flex items-center justify-between border border-border rounded-xl p-3 gap-3">
-                      <span className="font-medium text-foreground">{e.business_name}</span>
-                      <div className="text-sm text-foreground-secondary flex items-center gap-3 whitespace-nowrap">
+                    <div key={e.employer_id} className="border border-border rounded-xl p-3 space-y-2">
+                      <span className="font-medium text-foreground block">{e.business_name}</span>
+                      <div className="text-sm text-foreground-secondary flex flex-wrap items-center gap-x-3 gap-y-1">
                         <span>{e.unique_workers} {t("reports.unique_workers")}</span>
                         <span>{e.shifts} {t("reports.shifts_short")}</span>
                         <span>{e.hours} {t("reports.hours_short")}</span>
-                        <span>{t("admin.reports.est_employer_billing")}: {t("general.currency")}{e.estimated_billed}</span>
-                        <span>{t("admin.reports.est_worker_payout")}: {t("general.currency")}{e.estimated_payout}</span>
-                        <span className="font-medium text-foreground">{t("admin.reports.est_platform_margin")}: {t("general.currency")}{e.estimated_platform_remainder}</span>
+                        <span>{t("general.currency")}{e.estimated_billed} {t("admin.reports.est_employer_billing")}</span>
+                        <span>{t("general.currency")}{e.estimated_payout} {t("admin.reports.est_worker_payout")}</span>
+                        <span className="font-medium text-foreground">{t("general.currency")}{e.estimated_platform_remainder} {t("admin.reports.est_platform_margin")}</span>
                       </div>
                     </div>
                   ))}
