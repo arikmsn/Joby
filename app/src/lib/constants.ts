@@ -47,15 +47,42 @@ export const SLOT_COUNTED_STATUSES: ApplicationStatus[] = [
   ApplicationStatus.RATED,
 ];
 
-// --- Payment Status (per application / payout item) ---
+// --- Payment Status (per application) ---
+// Tracks the payment lifecycle on the application itself:
+//   PENDING → APPROVED_FOR_PAYMENT → PAYABLE → PAYOUT_PENDING → PAID / FAILED
 export const PaymentStatus = {
   PENDING: "PENDING",
   APPROVED_FOR_PAYMENT: "APPROVED_FOR_PAYMENT",
   PAYABLE: "PAYABLE",
   PAYOUT_PENDING: "PAYOUT_PENDING",
   PAID: "PAID",
+  FAILED: "FAILED",
 } as const;
 export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus];
+
+// --- Ledger Item Status ---
+// Tracks the transfer lifecycle on each payout_ledger row:
+//   PENDING → SUBMITTED → CONFIRMED / FAILED   (+ HELD for blocked items)
+export const LedgerStatus = {
+  PENDING: "PENDING",
+  SUBMITTED: "SUBMITTED",
+  CONFIRMED: "CONFIRMED",
+  FAILED: "FAILED",
+  HELD: "HELD",
+} as const;
+export type LedgerStatus = (typeof LedgerStatus)[keyof typeof LedgerStatus];
+
+// --- Batch Status ---
+// Tracks batch-level transfer lifecycle:
+//   PREPARED → SUBMITTED → CONFIRMED / FAILED / PARTIALLY_CONFIRMED
+export const BatchStatus = {
+  PREPARED: "PREPARED",
+  SUBMITTED: "SUBMITTED",
+  CONFIRMED: "CONFIRMED",
+  FAILED: "FAILED",
+  PARTIALLY_CONFIRMED: "PARTIALLY_CONFIRMED",
+} as const;
+export type BatchStatus = (typeof BatchStatus)[keyof typeof BatchStatus];
 
 // Application statuses that represent completed work (eligible for payment/reporting)
 export const PAYABLE_STATUSES: ApplicationStatus[] = [

@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   if (eligible.length === 0) {
     return NextResponse.json({
       message: "No eligible applications found",
-      result: { created: 0, skipped: 0, batch_id: null, total_gross: 0, total_fees: 0, total_net: 0 },
+      result: { created: 0, skipped: 0, batch_id: null, total_gross: 0, total_fees: 0, total_net: 0, total_warnings: 0, audit_note: "" },
     });
   }
 
@@ -27,8 +27,12 @@ export async function POST(req: NextRequest) {
     preparedBy: userOrRes.id,
   });
 
+  const warningNote = result.total_warnings > 0
+    ? ` (${result.total_warnings} אזהרות)`
+    : "";
+
   return NextResponse.json({
-    message: `Prepared ${result.created} payout items${result.batch_id ? ` in batch` : ""}`,
+    message: `Prepared ${result.created} payout items${result.batch_id ? " in batch" : ""}${warningNote}`,
     result,
   });
 }
