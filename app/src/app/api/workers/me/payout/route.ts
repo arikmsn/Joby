@@ -25,10 +25,25 @@ function selectPayoutFields() {
     payout_account_number: workerProfiles.payout_account_number,
     payout_account_holder: workerProfiles.payout_account_holder,
     payout_details_completed_at: workerProfiles.payout_details_completed_at,
+    supplier_type: workerProfiles.supplier_type,
+    tax_id: workerProfiles.tax_id,
+    payout_ready: workerProfiles.payout_ready,
   };
 }
 
-// GET /api/workers/me/payout — payout detail collection (data-only, foundation for future payouts)
+function computePayoutReady(data: Record<string, unknown>): boolean {
+  const bankFieldsFilled = PAYOUT_FIELDS.every(
+    (f) => !!data[f] && String(data[f]).trim() !== ""
+  );
+  if (!bankFieldsFilled) return false;
+  const st = data.supplier_type as string | null;
+  if (!st) return false;
+  if (st === "freelancer_licensed" || st === "company") {
+    if (!data.tax_id || String(data.tax_id).trim() === "") return false;
+  }
+  return true;
+}
+
 export async function GET(req: NextRequest) {
   const userOrRes = await requireRole(req, UserRole.WORKER);
   if (userOrRes instanceof NextResponse) return userOrRes;
@@ -46,7 +61,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ payout: rows[0] });
 }
 
-// PATCH /api/workers/me/payout — update payout details (data collection only, no real payout logic)
 export async function PATCH(req: NextRequest) {
   const userOrRes = await requireRole(req, UserRole.WORKER);
   if (userOrRes instanceof NextResponse) return userOrRes;
@@ -77,12 +91,14 @@ export async function PATCH(req: NextRequest) {
 
   const merged = { ...current[0], ...data };
   const isComplete = PAYOUT_FIELDS.every((f) => !!merged[f] && String(merged[f]).trim() !== "");
+  const isReady = computePayoutReady(merged as Record<string, unknown>);
 
   const updated = await db
     .update(workerProfiles)
     .set({
       ...data,
       payout_details_completed_at: isComplete ? sql`now()` : null,
+      payout_ready: isReady,
     })
     .where(eq(workerProfiles.user_id, userOrRes.id))
     .returning(selectPayoutFields());

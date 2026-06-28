@@ -298,6 +298,8 @@ export const updatePayoutDetailsSchema = z.object({
   payout_bank_branch: z.string().max(20).nullable().optional(),
   payout_account_number: z.string().max(50).nullable().optional(),
   payout_account_holder: z.string().max(255).nullable().optional(),
+  supplier_type: z.enum(["freelancer_exempt", "freelancer_licensed", "company"]).nullable().optional(),
+  tax_id: z.string().max(50).nullable().optional(),
 });
 
 // --- Reports range (Sprint 6) ---

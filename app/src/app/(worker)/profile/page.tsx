@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card";
 import { OccupationPicker, type OccupationOption } from "@/components/ui/occupation-picker";
 import { User, MapPin, LogOut, Shield, Pencil, Car, Globe2, Banknote, Cake, Wallet, CheckCircle2, AlertCircle, Info, X, UserPlus, Send, Bell } from "lucide-react";
 import type { WorkerProfile } from "@/lib/types";
-import { ISRAEL_CITIES, WORKER_LANGUAGES, LICENSE_TYPES, VEHICLE_TYPES } from "@/lib/constants";
+import { ISRAEL_CITIES, WORKER_LANGUAGES, LICENSE_TYPES, VEHICLE_TYPES, Config } from "@/lib/constants";
 
 export default function ProfilePage() {
   const { user, profile, logout, token, refreshUser } = useAuth();
@@ -63,6 +63,9 @@ export default function ProfilePage() {
     payout_account_number: "",
     payout_account_holder: "",
     payout_details_completed_at: null as string | null,
+    supplier_type: "" as string,
+    tax_id: "" as string,
+    payout_ready: false,
   });
 
   useEffect(() => {
@@ -79,6 +82,9 @@ export default function ProfilePage() {
             payout_account_number: data.payout.payout_account_number || "",
             payout_account_holder: data.payout.payout_account_holder || "",
             payout_details_completed_at: data.payout.payout_details_completed_at || null,
+            supplier_type: data.payout.supplier_type || "",
+            tax_id: data.payout.tax_id || "",
+            payout_ready: data.payout.payout_ready || false,
           });
         }
       })
@@ -102,11 +108,17 @@ export default function ProfilePage() {
           payout_bank_branch: payout.payout_bank_branch || null,
           payout_account_number: payout.payout_account_number || null,
           payout_account_holder: payout.payout_account_holder || null,
+          supplier_type: payout.supplier_type || null,
+          tax_id: payout.tax_id || null,
         }),
       });
       if (res.ok) {
         const data = await res.json();
-        setPayout((prev) => ({ ...prev, payout_details_completed_at: data.payout?.payout_details_completed_at || null }));
+        setPayout((prev) => ({
+          ...prev,
+          payout_details_completed_at: data.payout?.payout_details_completed_at || null,
+          payout_ready: data.payout?.payout_ready || false,
+        }));
         setEditingPayout(false);
       }
     } finally {
@@ -650,7 +662,7 @@ export default function ProfilePage() {
 
         <p className="text-sm text-foreground-secondary">{t("payout.subtitle")}</p>
 
-        {payout.payout_details_completed_at ? (
+        {payout.payout_ready ? (
           <Badge variant="success">
             <CheckCircle2 className="h-3.5 w-3.5" />
             {t("payout.completed_badge")}
@@ -662,8 +674,21 @@ export default function ProfilePage() {
           </Badge>
         )}
 
-        {!payout.payout_details_completed_at && (
-          <p className="text-xs text-warning bg-warning/10 rounded-lg p-2.5">{t("payout.required_notice")}</p>
+        {!payout.payout_ready && (
+          <div className="text-xs bg-warning/10 rounded-lg p-2.5 space-y-1.5">
+            <p className="text-warning font-medium">{t("payout.missing_fields")}</p>
+            <ul className="text-foreground-secondary space-y-0.5 list-disc list-inside">
+              {!payout.payout_legal_name && <li>{t("payout.field_legal_name")}</li>}
+              {!payout.payout_id_number && <li>{t("payout.field_id_number")}</li>}
+              {(!payout.payout_bank_name || !payout.payout_bank_branch || !payout.payout_account_number || !payout.payout_account_holder) && (
+                <li>{t("payout.field_bank_details")}</li>
+              )}
+              {!payout.supplier_type && <li>{t("payout.field_supplier_type")}</li>}
+              {(payout.supplier_type === "freelancer_licensed" || payout.supplier_type === "company") && !payout.tax_id && (
+                <li>{t("payout.field_tax_id")}</li>
+              )}
+            </ul>
+          </div>
         )}
 
         <AnimatePresence mode="wait" initial={false}>
@@ -695,6 +720,37 @@ export default function ProfilePage() {
                   />
                 </div>
               ))}
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  {t("payout.supplier_type")}
+                </label>
+                <select
+                  className="w-full rounded-[var(--radius)] border border-border bg-surface px-3.5 py-2.5 text-sm transition-colors duration-150 hover:border-foreground-tertiary/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  value={payout.supplier_type}
+                  onChange={(e) => setPayoutField("supplier_type", e.target.value)}
+                >
+                  <option value="">{t("payout.supplier_type_placeholder")}</option>
+                  {Config.SUPPLIER_TYPES.map((st) => (
+                    <option key={st.key} value={st.key}>{st.label_he}</option>
+                  ))}
+                </select>
+              </div>
+
+              {(payout.supplier_type === "freelancer_licensed" || payout.supplier_type === "company") && (
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">
+                    {t("payout.tax_id")}
+                  </label>
+                  <input
+                    className="w-full rounded-[var(--radius)] border border-border bg-surface px-3.5 py-2.5 text-sm transition-colors duration-150 hover:border-foreground-tertiary/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    value={payout.tax_id}
+                    onChange={(e) => setPayoutField("tax_id", e.target.value)}
+                  />
+                  <p className="text-xs text-foreground-tertiary mt-1">{t("payout.tax_id_hint")}</p>
+                </div>
+              )}
+
               <div className="flex gap-2">
                 <Button size="sm" onClick={handleSavePayout} loading={savingPayout}>
                   {t("payout.save")}
@@ -719,6 +775,14 @@ export default function ProfilePage() {
               <div>{t("payout.bank_branch")}: {payout.payout_bank_branch || t("profile.not_set")}</div>
               <div>{t("payout.account_number")}: {payout.payout_account_number || t("profile.not_set")}</div>
               <div>{t("payout.account_holder")}: {payout.payout_account_holder || t("profile.not_set")}</div>
+              <div>{t("payout.supplier_type")}: {
+                payout.supplier_type
+                  ? Config.SUPPLIER_TYPES.find((st) => st.key === payout.supplier_type)?.label_he || payout.supplier_type
+                  : t("profile.not_set")
+              }</div>
+              {(payout.supplier_type === "freelancer_licensed" || payout.supplier_type === "company") && (
+                <div>{t("payout.tax_id")}: {payout.tax_id || t("profile.not_set")}</div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

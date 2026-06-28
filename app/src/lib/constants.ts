@@ -51,6 +51,8 @@ export const SLOT_COUNTED_STATUSES: ApplicationStatus[] = [
 export const PaymentStatus = {
   PENDING: "PENDING",
   APPROVED_FOR_PAYMENT: "APPROVED_FOR_PAYMENT",
+  PAYABLE: "PAYABLE",
+  PAYOUT_PENDING: "PAYOUT_PENDING",
   PAID: "PAID",
 } as const;
 export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus];
@@ -218,4 +220,11 @@ export const Config = {
   // Platform fee charged on top of worker pay, used only to compute
   // estimated employer billing / platform margin in reporting screens.
   PLATFORM_FEE_PERCENT: 15,
+
+  // Supplier types for freelancer/vendor payout model
+  SUPPLIER_TYPES: [
+    { key: "freelancer_exempt", label_he: "עוסק פטור" },
+    { key: "freelancer_licensed", label_he: "עוסק מורשה" },
+    { key: "company", label_he: "חברה בע\"מ" },
+  ] as readonly { key: string; label_he: string }[],
 } as const;

@@ -87,6 +87,9 @@ export const workerProfiles = pgTable("worker_profiles", {
   payout_account_number: varchar("payout_account_number", { length: 50 }),
   payout_account_holder: varchar("payout_account_holder", { length: 255 }),
   payout_details_completed_at: timestamp("payout_details_completed_at", { withTimezone: true }),
+  supplier_type: varchar("supplier_type", { length: 30 }),
+  tax_id: varchar("tax_id", { length: 50 }),
+  payout_ready: boolean("payout_ready").notNull().default(false),
   reminders_enabled: boolean("reminders_enabled").notNull().default(true),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
@@ -245,6 +248,22 @@ export const notifications = pgTable("notifications", {
   channel: varchar("channel", { length: 20 }).notNull().default("in_app"),
   is_read: boolean("is_read").notNull().default(false),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+// --- Payout Ledger ---
+export const payoutLedger = pgTable("payout_ledger", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  worker_id: uuid("worker_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  application_id: uuid("application_id").notNull().references(() => applications.id),
+  shift_id: uuid("shift_id").notNull().references(() => shifts.id),
+  gross_amount: decimal("gross_amount", { precision: 10, scale: 2 }).notNull(),
+  platform_fee: decimal("platform_fee", { precision: 10, scale: 2 }).notNull(),
+  net_amount: decimal("net_amount", { precision: 10, scale: 2 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("PENDING"),
+  batch_id: varchar("batch_id", { length: 100 }),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  transferred_at: timestamp("transferred_at", { withTimezone: true }),
+  confirmed_at: timestamp("confirmed_at", { withTimezone: true }),
 });
 
 // ── OTP tables (DB-backed OTP store for serverless) ──────────
