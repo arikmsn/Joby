@@ -638,6 +638,28 @@ const he = {
   "admin.reports.estimate_disclaimer": "כל הנתונים הכספיים הינם הערכות תפעוליות פנימיות בלבד, מבוססות על אחוז עמלה פרמטרי ({fee}%), ואינן מהוות חשבונית, דיווח שכר או רישום חשבונאי סופי",
   "admin.reports.fee_percent": "אחוז עמלת פלטפורמה",
 
+  // --- Admin Payouts ---
+  "nav.payouts": "תשלומים",
+  "admin.payouts.title": "ניהול תשלומים",
+  "admin.payouts.ready_workers": "ספקים מוכנים",
+  "admin.payouts.not_ready_workers": "חסרים פרטים",
+  "admin.payouts.eligible_items": "פריטים זכאים",
+  "admin.payouts.ledger_items": "רשומות בספר",
+  "admin.payouts.prepare_title": "הכנת תשלומים",
+  "admin.payouts.prepare_subtitle": "סריקת עבודות שהושלמו ויצירת רשומות תשלום — ללא העברה בפועל",
+  "admin.payouts.prepare_action": "הכן פריטים",
+  "admin.payouts.no_eligible": "אין פריטים חדשים שזכאים לתשלום כרגע",
+  "admin.payouts.batches_title": "אצוות תשלום",
+  "admin.payouts.items": "פריטים",
+  "admin.payouts.ledger_title": "ספר תשלומים",
+  "admin.payouts.total_gross": "ברוטו",
+  "admin.payouts.total_fees": "עמלה",
+  "admin.payouts.total_net": "נטו",
+  "admin.payouts.readiness_title": "מוכנות ספקים",
+  "admin.payouts.ready_section": "מוכנים",
+  "admin.payouts.not_ready_section": "לא מוכנים",
+  "admin.payouts.disclaimer": "נתוני התשלומים הם הכנה פנימית בלבד — לא מתבצעת העברת כספים בפועל",
+
   // --- Worker Earnings (Sprint 6) ---
   "earnings.title": "הכנסות",
   "earnings.range_today": "היום",

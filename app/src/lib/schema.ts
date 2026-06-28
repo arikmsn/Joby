@@ -250,6 +250,20 @@ export const notifications = pgTable("notifications", {
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
+// --- Payout Batches ---
+export const payoutBatches = pgTable("payout_batches", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  batch_date: date("batch_date").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("PREPARED"),
+  items_count: integer("items_count").notNull().default(0),
+  total_gross: decimal("total_gross", { precision: 12, scale: 2 }).notNull().default("0"),
+  total_fees: decimal("total_fees", { precision: 12, scale: 2 }).notNull().default("0"),
+  total_net: decimal("total_net", { precision: 12, scale: 2 }).notNull().default("0"),
+  prepared_by: uuid("prepared_by").references(() => users.id),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  transferred_at: timestamp("transferred_at", { withTimezone: true }),
+});
+
 // --- Payout Ledger ---
 export const payoutLedger = pgTable("payout_ledger", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -260,7 +274,7 @@ export const payoutLedger = pgTable("payout_ledger", {
   platform_fee: decimal("platform_fee", { precision: 10, scale: 2 }).notNull(),
   net_amount: decimal("net_amount", { precision: 10, scale: 2 }).notNull(),
   status: varchar("status", { length: 20 }).notNull().default("PENDING"),
-  batch_id: varchar("batch_id", { length: 100 }),
+  batch_id: uuid("batch_id").references(() => payoutBatches.id),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
   transferred_at: timestamp("transferred_at", { withTimezone: true }),
   confirmed_at: timestamp("confirmed_at", { withTimezone: true }),

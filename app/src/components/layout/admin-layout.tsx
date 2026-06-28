@@ -13,6 +13,7 @@ import {
   CalendarDays,
   Tags,
   BarChart3,
+  Wallet,
   Menu,
   X,
 } from "lucide-react";
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   { href: "/workers", icon: Users, labelKey: "nav.workers" as const },
   { href: "/admin-shifts", icon: CalendarDays, labelKey: "nav.shifts" as const },
   { href: "/admin-reports", icon: BarChart3, labelKey: "nav.reports" as const },
+  { href: "/payouts", icon: Wallet, labelKey: "nav.payouts" as const },
   { href: "/catalog", icon: Tags, labelKey: "nav.catalog" as const },
   { href: "/incidents", icon: AlertTriangle, labelKey: "nav.incidents" as const },
   { href: "/action-log", icon: ScrollText, labelKey: "nav.log" as const },
