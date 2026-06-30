@@ -18,7 +18,7 @@ import {
 } from "@/lib/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { PAYABLE_STATUSES, Config, PaymentStatus } from "@/lib/constants";
-import { computeHours, computePay } from "@/lib/reporting";
+import { computeHours, computePay, groupCheckinEvents } from "@/lib/reporting";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -171,13 +171,7 @@ export async function prepareLedgerItems(
     .from(checkinEvents)
     .where(inArray(checkinEvents.application_id, appIds));
 
-  const eventsByApp = new Map<string, { checkIn: Date | null; checkOut: Date | null }>();
-  for (const e of events) {
-    const entry = eventsByApp.get(e.application_id) || { checkIn: null, checkOut: null };
-    if (e.event_type === "CHECK_IN") entry.checkIn = new Date(e.created_at!);
-    if (e.event_type === "CHECK_OUT") entry.checkOut = new Date(e.created_at!);
-    eventsByApp.set(e.application_id, entry);
-  }
+  const eventsByApp = groupCheckinEvents(events);
 
   let batchId: string | null = null;
   let totalGross = 0;

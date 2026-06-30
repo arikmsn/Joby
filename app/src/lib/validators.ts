@@ -3,7 +3,21 @@
 // ============================================================
 
 import { z } from "zod";
-import { UserRole } from "./constants";
+import { UserRole, LedgerStatus, BatchStatus } from "./constants";
+
+// --- Shared primitives ---
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Lightweight UUID check for route params. Use to reject malformed ids
+ * before they reach Postgres (a non-uuid string would otherwise throw a
+ * 500 "invalid input syntax for type uuid" instead of a clean 404/400).
+ */
+export function isUuid(value: string | undefined | null): value is string {
+  return typeof value === "string" && UUID_RE.test(value);
+}
 
 // --- Auth ---
 
@@ -307,6 +321,23 @@ export const updatePayoutDetailsSchema = z.object({
 export const reportRangeSchema = z.object({
   range: z.enum(["today", "week", "month"]).default("today"),
 });
+
+// --- Payout lifecycle transitions (admin, internal) ---
+
+export const payoutTransitionSchema = z.discriminatedUnion("entity_type", [
+  z.object({
+    entity_type: z.literal("item"),
+    entity_id: z.string().uuid(),
+    target_status: z.nativeEnum(LedgerStatus),
+  }),
+  z.object({
+    entity_type: z.literal("batch"),
+    entity_id: z.string().uuid(),
+    target_status: z.nativeEnum(BatchStatus),
+    cascade_to_items: z.boolean().optional(),
+  }),
+]);
+export type PayoutTransitionInput = z.infer<typeof payoutTransitionSchema>;
 
 // Type exports
 export type SendOtpInput = z.infer<typeof sendOtpSchema>;

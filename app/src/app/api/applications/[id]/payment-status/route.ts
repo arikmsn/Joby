@@ -15,6 +15,12 @@ const NEXT_STATUS: Record<string, string> = {
 // PATCH /api/applications/[id]/payment-status
 // Admin-only operational status transition (PENDING -> APPROVED_FOR_PAYMENT -> PAID).
 // This marks internal payment-tracking state only — no real money movement.
+//
+// Boundary note: this is the lightweight manual tracking path. Once an
+// application enters the payout pipeline (status becomes PAYABLE via
+// prepareLedgerItems), NEXT_STATUS has no key for it, so this route can no
+// longer mutate it — the ledger/batch lifecycle (payout-lifecycle.ts) takes
+// over and is the audited source of truth from that point on.
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }

@@ -5,7 +5,7 @@ import { applications, shifts, checkinEvents } from "@/lib/schema";
 import { eq, and, gte, lt, inArray } from "drizzle-orm";
 import { UserRole, PAYABLE_STATUSES, ApplicationStatus } from "@/lib/constants";
 import { reportRangeSchema } from "@/lib/validators";
-import { getRangeBounds, computeHours, computePay, type ReportRange } from "@/lib/reporting";
+import { getRangeBounds, computeHours, computePay, groupCheckinEvents, type ReportRange } from "@/lib/reporting";
 
 // GET /api/workers/earnings?range=today|week|month
 // Worker-facing earnings/payment-status visibility. Figures are current
@@ -95,13 +95,7 @@ export async function GET(req: NextRequest) {
     .from(checkinEvents)
     .where(inArray(checkinEvents.application_id, appIds));
 
-  const eventsByApp = new Map<string, { checkIn: Date | null; checkOut: Date | null }>();
-  for (const e of events) {
-    const entry = eventsByApp.get(e.application_id) || { checkIn: null, checkOut: null };
-    if (e.event_type === "CHECK_IN") entry.checkIn = new Date(e.created_at!);
-    if (e.event_type === "CHECK_OUT") entry.checkOut = new Date(e.created_at!);
-    eventsByApp.set(e.application_id, entry);
-  }
+  const eventsByApp = groupCheckinEvents(events);
 
   let totalHours = 0;
   let totalEarnings = 0;

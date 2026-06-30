@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { UserRole } from "@/lib/constants";
+import { payoutTransitionSchema } from "@/lib/validators";
 import {
   transitionLedgerItem,
   transitionBatch,
@@ -8,60 +9,51 @@ import {
   getValidBatchTransitions,
 } from "@/lib/payout-lifecycle";
 
-// POST /api/admin/payouts/transition — manual admin state transition
-// For internal testing of the payout lifecycle before a real provider exists.
+// POST /api/admin/payouts/transition — manual admin state transition.
+// Internal testing of the payout lifecycle before a real provider exists.
+// The lifecycle module is the source of truth for which transitions are
+// legal; this route only validates the request shape and delegates.
 export async function POST(req: NextRequest) {
   const userOrRes = await requireRole(req, UserRole.ADMIN);
   if (userOrRes instanceof NextResponse) return userOrRes;
 
   const body = await req.json().catch(() => null);
-  if (!body) {
-    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
-  }
-
-  const { entity_type, entity_id, target_status, cascade_to_items } = body as {
-    entity_type: "item" | "batch";
-    entity_id: string;
-    target_status: string;
-    cascade_to_items?: boolean;
-  };
-
-  if (!entity_type || !entity_id || !target_status) {
+  const parsed = payoutTransitionSchema.safeParse(body);
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "Missing entity_type, entity_id, or target_status" },
+      { error: "VALIDATION", message: parsed.error.issues[0]?.message || "Invalid request" },
       { status: 400 }
     );
   }
 
-  if (entity_type === "item") {
-    const result = await transitionLedgerItem(entity_id, target_status, {
+  const data = parsed.data;
+  const auditMessage = `Manual transition by admin ${userOrRes.id}`;
+
+  if (data.entity_type === "item") {
+    const result = await transitionLedgerItem(data.entity_id, data.target_status, {
       adminId: userOrRes.id,
-      providerMessage: `Manual transition by admin ${userOrRes.id}`,
+      providerMessage: auditMessage,
     });
     return NextResponse.json(result, { status: result.success ? 200 : 400 });
   }
 
-  if (entity_type === "batch") {
-    const result = await transitionBatch(entity_id, target_status, {
-      adminId: userOrRes.id,
-      cascadeToItems: cascade_to_items ?? true,
-      providerName: "manual",
-      providerMessage: `Manual transition by admin ${userOrRes.id}`,
-    });
-    return NextResponse.json(result, { status: result.success ? 200 : 400 });
-  }
-
-  return NextResponse.json({ error: "entity_type must be 'item' or 'batch'" }, { status: 400 });
+  const result = await transitionBatch(data.entity_id, data.target_status, {
+    adminId: userOrRes.id,
+    cascadeToItems: data.cascade_to_items ?? true,
+    providerName: "manual",
+    providerMessage: auditMessage,
+  });
+  return NextResponse.json(result, { status: result.success ? 200 : 400 });
 }
 
 // GET /api/admin/payouts/transition?entity_type=item&status=PENDING
-// Returns valid transitions for a given current status
+// Returns valid transitions for a given current status.
 export async function GET(req: NextRequest) {
   const userOrRes = await requireRole(req, UserRole.ADMIN);
   if (userOrRes instanceof NextResponse) return userOrRes;
 
   const { searchParams } = new URL(req.url);
-  const entityType = searchParams.get("entity_type") || "item";
+  const entityType = searchParams.get("entity_type") === "batch" ? "batch" : "item";
   const currentStatus = searchParams.get("status") || "";
 
   const transitions = entityType === "batch"

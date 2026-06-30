@@ -53,6 +53,30 @@ export function computePay(hours: number, payRate: number, payType: string): num
   return payType === "fixed" ? payRate : hours * payRate;
 }
 
+export interface CheckinWindow {
+  checkIn: Date | null;
+  checkOut: Date | null;
+}
+
+/**
+ * Reduce a flat list of check-in events into a per-application
+ * { checkIn, checkOut } map. Shared by earnings reporting and the payout
+ * pipeline so attendance is interpreted identically everywhere.
+ */
+export function groupCheckinEvents(
+  events: { application_id: string; event_type: string; created_at: Date | string | null }[]
+): Map<string, CheckinWindow> {
+  const byApp = new Map<string, CheckinWindow>();
+  for (const e of events) {
+    if (!e.created_at) continue;
+    const entry = byApp.get(e.application_id) || { checkIn: null, checkOut: null };
+    if (e.event_type === "CHECK_IN") entry.checkIn = new Date(e.created_at);
+    if (e.event_type === "CHECK_OUT") entry.checkOut = new Date(e.created_at);
+    byApp.set(e.application_id, entry);
+  }
+  return byApp;
+}
+
 export function dateKey(d: Date): string {
   return d.toISOString().slice(0, 10);
 }

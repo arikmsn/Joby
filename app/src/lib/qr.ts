@@ -39,10 +39,10 @@ export async function validateQrToken(
 
   if (mode !== "CHECK_IN" && mode !== "CHECK_OUT") return null;
 
-  // Verify signature
+  // Verify signature (constant-time to avoid leaking via comparison timing)
   const payload = `${shiftId}:${mode}:${timestamp}`;
   const expected = await hmacSign(payload);
-  if (signature !== expected) return null;
+  if (!timingSafeEqual(signature, expected)) return null;
 
   // Check expiry
   const tokenTime = parseInt(timestamp, 10);
@@ -53,6 +53,20 @@ export async function validateQrToken(
   if (ageMs > maxAgeMs || ageMs < 0) return null;
 
   return { shiftId, mode: mode as "CHECK_IN" | "CHECK_OUT" };
+}
+
+/**
+ * Constant-time string comparison. The signatures are fixed-length hex
+ * (SHA-256 → 64 chars), so the early length check leaks nothing useful while
+ * the XOR loop avoids early-exit timing differences on the secret-derived part.
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
 }
 
 async function hmacSign(data: string): Promise<string> {
