@@ -2,7 +2,7 @@
   "crons": [
     { "path": "/api/cron/cleanup-otps", "schedule": "0 3 * * *" },
     { "path": "/api/cron/shift-reminders", "schedule": "0 6 * * *" },
-    { "path": "/api/admin/growth/jobs/collect", "schedule": "0 * * * *" },
+    { "path": "/api/admin/growth/jobs/collect", "schedule": "0 5 * * *" },
     { "path": "/api/admin/growth/jobs/cluster", "schedule": "30 0 * * *" },
     { "path": "/api/admin/growth/jobs/purge", "schedule": "0 1 * * *" }
   ]
