@@ -40,8 +40,15 @@ cd app && npm run check:growth-authz # Growth route authz gate (CI)
 - Growth UI strings: `app/src/lib/i18n/he-growth.ts` (admin-only namespace, not he.ts).
 - Candidate PII is masked by default (`lib/growth/dto.ts`); source raw_text is TTL-purged (30d) by
   the cron job at `/api/admin/growth/jobs/purge`.
-- Schema changes: do NOT use `drizzle-kit push` (live DB has drift on `users` and push offers a
-  destructive truncate). Use additive SQL via `scripts/migrate-growth.mjs` pattern.
+## Migration Safety Policy
+- **Never** use `drizzle-kit push --force` in this repo — it auto-accepts destructive
+  statements (it has offered to TRUNCATE `users` here).
+- Avoid `drizzle-kit push` against shared/prod-like DBs with drift. The live Neon DB has
+  known drift on `users` (constraint naming), so push diffs include destructive fixes.
+- Use **additive** migrations/scripts only (`CREATE/ALTER ... IF NOT EXISTS`) unless a
+  destructive change is explicitly approved. Pattern: `app/scripts/migrate-growth.mjs`.
+- Document any schema drift you discover (what/where/why) in `docs/` **before** applying
+  changes, and keep `schema.ts` updated in parallel as the source of truth.
 
 ## Key Rules
 - Hebrew RTL UI only — all user-facing strings in he.ts
