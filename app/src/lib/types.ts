@@ -26,6 +26,7 @@ export interface User {
   avatar_url: string | null;
   is_active: boolean;
   created_by_admin: boolean;
+  admin_sub_role: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -260,4 +261,6 @@ export interface AuthUser {
   role: UserRole;
   full_name: string;
   is_active: boolean;
+  // Growth module sub-role (null = no growth access). Only meaningful for role=admin.
+  admin_sub_role: string | null;
 }

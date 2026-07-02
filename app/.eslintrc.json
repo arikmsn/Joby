@@ -1,3 +1,26 @@
 {
-  "extends": ["next/core-web-vitals", "next/typescript"]
+  "extends": ["next/core-web-vitals", "next/typescript"],
+  "overrides": [
+    {
+      "files": [
+        "src/app/(worker)/**/*",
+        "src/app/(employer)/**/*",
+        "src/components/worker/**/*",
+        "src/components/employer/**/*"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/lib/growth/*", "@/lib/growth", "@/lib/i18n/he-growth"],
+                "message": "Growth module is admin-only — never import it from worker/employer code (execution pack isolation rule)."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }

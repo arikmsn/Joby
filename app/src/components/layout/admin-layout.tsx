@@ -16,10 +16,13 @@ import {
   Wallet,
   Menu,
   X,
+  Radar,
+  ClipboardList,
 } from "lucide-react";
 import { NavLink } from "./nav-link";
 import { useAuth } from "@/lib/auth-context";
 import { t } from "@/lib/i18n/he";
+import { tGrowth } from "@/lib/i18n/he-growth";
 
 const NAV_ITEMS = [
   { href: "/overview", icon: LayoutGrid, labelKey: "nav.overview" as const },
@@ -33,9 +36,30 @@ const NAV_ITEMS = [
   { href: "/action-log", icon: ScrollText, labelKey: "nav.log" as const },
 ];
 
+// Growth module nav (admin-only module) — rendered only when the admin
+// holds a growth sub-role AND the client flag mirror is on. The actual
+// control is withGrowthAuth on every /api/admin/growth/* route.
+const GROWTH_NAV_ITEMS = [
+  { href: "/growth/sources", icon: Radar, label: tGrowth("growth.nav.sources") },
+  {
+    href: "/growth/observations",
+    icon: ClipboardList,
+    label: tGrowth("growth.nav.observations"),
+  },
+];
+
+function useGrowthNavVisible(): boolean {
+  const { user } = useAuth();
+  return (
+    process.env.NEXT_PUBLIC_GROWTH_MODULE_ENABLED === "true" &&
+    !!user?.admin_sub_role
+  );
+}
+
 export function AdminLayout({ children }: { children: ReactNode }) {
   const { logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const growthNavVisible = useGrowthNavVisible();
 
   return (
     <div className="flex min-h-screen">
@@ -59,6 +83,21 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               label={t(item.labelKey)}
             />
           ))}
+          {growthNavVisible && (
+            <>
+              <p className="pt-3 pb-1 px-3 text-xs font-semibold text-foreground-tertiary">
+                {tGrowth("growth.nav.title")}
+              </p>
+              {GROWTH_NAV_ITEMS.map((item) => (
+                <NavLink
+                  key={item.href}
+                  href={item.href}
+                  icon={<item.icon className="h-5 w-5" />}
+                  label={item.label}
+                />
+              ))}
+            </>
+          )}
         </nav>
 
         <div className="p-3 border-t border-border">
@@ -109,6 +148,16 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                       onClick={() => setMobileMenuOpen(false)}
                     />
                   ))}
+                  {growthNavVisible &&
+                    GROWTH_NAV_ITEMS.map((item) => (
+                      <NavLink
+                        key={item.href}
+                        href={item.href}
+                        icon={<item.icon className="h-5 w-5" />}
+                        label={item.label}
+                        onClick={() => setMobileMenuOpen(false)}
+                      />
+                    ))}
                   <button
                     onClick={() => { setMobileMenuOpen(false); logout(); }}
                     className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors duration-150"

@@ -15,6 +15,15 @@ const nextConfig = {
           },
         ],
       },
+      // Growth module (admin-only): never indexed
+      {
+        source: "/growth/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/api/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
     ];
   },
 };

@@ -63,6 +63,7 @@ export async function extractUser(
       role: users.role,
       full_name: users.full_name,
       is_active: users.is_active,
+      admin_sub_role: users.admin_sub_role,
     })
     .from(users)
     .where(eq(users.id, decoded.userId))

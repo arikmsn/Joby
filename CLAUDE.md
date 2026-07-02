@@ -23,10 +23,25 @@
 
 ## Commands
 ```
-cd app && npm run dev    # Dev server
-cd app && npm run build  # Production build
-cd app && npm run lint   # ESLint
+cd app && npm run dev                # Dev server
+cd app && npm run build              # Production build
+cd app && npm run lint               # ESLint
+cd app && npm run check:growth-authz # Growth route authz gate (CI)
 ```
+
+## Growth Module (admin-only)
+- `app/src/lib/growth/` — candidate-acquisition growth engine (RBAC wrapper,
+  audit, DTO masking, dedup). NEVER import from worker/employer code (ESLint-enforced).
+- Every `/api/admin/growth/*` handler must be `export const METHOD = withGrowthAuth(permission, handler)`;
+  cron jobs under `growth/jobs/*` use `isAuthorizedCronRequest` instead. Enforced by `check:growth-authz`.
+- Growth sub-roles live in `users.admin_sub_role` (super_admin/growth_ops/growth_analyst/compliance_reviewer);
+  bootstrap: first admin self-grants super_admin via POST /api/admin/growth/roles/grant.
+- Feature flags: `GROWTH_MODULE_ENABLED` (server, 503 when off) + `NEXT_PUBLIC_GROWTH_MODULE_ENABLED` (nav).
+- Growth UI strings: `app/src/lib/i18n/he-growth.ts` (admin-only namespace, not he.ts).
+- Candidate PII is masked by default (`lib/growth/dto.ts`); source raw_text is TTL-purged (30d) by
+  the cron job at `/api/admin/growth/jobs/purge`.
+- Schema changes: do NOT use `drizzle-kit push` (live DB has drift on `users` and push offers a
+  destructive truncate). Use additive SQL via `scripts/migrate-growth.mjs` pattern.
 
 ## Key Rules
 - Hebrew RTL UI only — all user-facing strings in he.ts

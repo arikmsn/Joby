@@ -211,6 +211,205 @@ export const VEHICLE_TYPES = [
   { key: "other", label_he: "אחר" },
 ] as const;
 
+// ============================================================
+// Growth Engine (admin-only module) — enums & permission registry
+// Server flag: GROWTH_MODULE_ENABLED ("true" to enable APIs)
+// Client nav mirror: NEXT_PUBLIC_GROWTH_MODULE_ENABLED
+// ============================================================
+
+// --- Growth Sub-Role (users.admin_sub_role; null = no growth access) ---
+export const GrowthSubRole = {
+  SUPER_ADMIN: "super_admin",
+  GROWTH_OPS: "growth_ops",
+  GROWTH_ANALYST: "growth_analyst",
+  COMPLIANCE_REVIEWER: "compliance_reviewer",
+} as const;
+export type GrowthSubRole = (typeof GrowthSubRole)[keyof typeof GrowthSubRole];
+
+// --- Growth Permissions (deny-by-default; checked by withGrowthAuth) ---
+export const GrowthPermission = {
+  SOURCES_READ: "growth:sources.read",
+  SOURCES_WRITE: "growth:sources.write",
+  SOURCES_APPROVE: "growth:sources.approve",
+  OBSERVATIONS_READ: "growth:observations.read",
+  OBSERVATIONS_WRITE: "growth:observations.write",
+  CLUSTERS_READ: "growth:clusters.read",
+  CLUSTERS_ANNOTATE: "growth:clusters.annotate",
+  BRIEFS_READ: "growth:briefs.read",
+  BRIEFS_APPROVE: "growth:briefs.approve",
+  ADS_READ: "growth:ads.read",
+  ADS_WRITE: "growth:ads.write",
+  ADS_COMPLIANCE: "growth:ads.compliance",
+  PUBLICATIONS_READ: "growth:publications.read",
+  PUBLICATIONS_WRITE: "growth:publications.write",
+  INTAKE_READ: "growth:intake.read",
+  INTAKE_REVIEW: "growth:intake.review",
+  CANDIDATES_PII: "growth:candidates.pii",
+  EMPLOYERS_READ: "growth:employers.read",
+  EMPLOYERS_WRITE: "growth:employers.write",
+  METRICS_READ: "growth:metrics.read",
+  AUDIT_READ: "growth:audit.read",
+  ROLES_MANAGE: "growth:roles.manage",
+  EXPORT: "growth:export",
+} as const;
+export type GrowthPermission =
+  (typeof GrowthPermission)[keyof typeof GrowthPermission];
+
+// Role → permissions. super_admin implicitly holds everything (see withGrowthAuth).
+export const GROWTH_ROLE_PERMISSIONS: Record<
+  Exclude<GrowthSubRole, "super_admin">,
+  GrowthPermission[]
+> = {
+  [GrowthSubRole.GROWTH_OPS]: [
+    GrowthPermission.SOURCES_READ,
+    GrowthPermission.SOURCES_WRITE,
+    GrowthPermission.SOURCES_APPROVE,
+    GrowthPermission.OBSERVATIONS_READ,
+    GrowthPermission.OBSERVATIONS_WRITE,
+    GrowthPermission.CLUSTERS_READ,
+    GrowthPermission.CLUSTERS_ANNOTATE,
+    GrowthPermission.BRIEFS_READ,
+    GrowthPermission.BRIEFS_APPROVE,
+    GrowthPermission.ADS_READ,
+    GrowthPermission.ADS_WRITE,
+    GrowthPermission.PUBLICATIONS_READ,
+    GrowthPermission.PUBLICATIONS_WRITE,
+    GrowthPermission.INTAKE_READ,
+    GrowthPermission.INTAKE_REVIEW,
+    GrowthPermission.EMPLOYERS_READ,
+    GrowthPermission.EMPLOYERS_WRITE,
+    GrowthPermission.METRICS_READ,
+    GrowthPermission.AUDIT_READ, // own actions only (scoped in handler)
+  ],
+  [GrowthSubRole.GROWTH_ANALYST]: [
+    GrowthPermission.SOURCES_READ,
+    GrowthPermission.SOURCES_WRITE, // propose only — approval is a separate permission
+    GrowthPermission.OBSERVATIONS_READ,
+    GrowthPermission.OBSERVATIONS_WRITE,
+    GrowthPermission.CLUSTERS_READ,
+    GrowthPermission.BRIEFS_READ,
+    GrowthPermission.INTAKE_READ,
+    GrowthPermission.INTAKE_REVIEW,
+    GrowthPermission.METRICS_READ,
+  ],
+  [GrowthSubRole.COMPLIANCE_REVIEWER]: [
+    GrowthPermission.CLUSTERS_READ,
+    GrowthPermission.BRIEFS_READ,
+    GrowthPermission.ADS_READ,
+    GrowthPermission.ADS_COMPLIANCE,
+    GrowthPermission.METRICS_READ,
+  ],
+};
+
+// --- Source Channel ---
+export const SourceChannelType = {
+  BOARD: "board",
+  FB_GROUP: "fb_group",
+  TELEGRAM: "telegram",
+  CAREER_PAGE: "career_page",
+  AGENCY: "agency",
+  GOV: "gov",
+  OTHER: "other",
+} as const;
+export type SourceChannelType =
+  (typeof SourceChannelType)[keyof typeof SourceChannelType];
+
+export const CollectionMethod = {
+  MANUAL: "manual",
+  FETCH: "fetch",
+  API: "api",
+} as const;
+export type CollectionMethod =
+  (typeof CollectionMethod)[keyof typeof CollectionMethod];
+
+export const RiskTier = {
+  LOW: "low",
+  MEDIUM: "medium",
+  HIGH: "high",
+} as const;
+export type RiskTier = (typeof RiskTier)[keyof typeof RiskTier];
+
+export const SourceChannelStatus = {
+  PROPOSED: "proposed",
+  APPROVED: "approved",
+  PAUSED: "paused",
+} as const;
+export type SourceChannelStatus =
+  (typeof SourceChannelStatus)[keyof typeof SourceChannelStatus];
+
+// --- Observations ---
+export const SalaryUnit = {
+  HOURLY: "hourly",
+  MONTHLY: "monthly",
+} as const;
+export type SalaryUnit = (typeof SalaryUnit)[keyof typeof SalaryUnit];
+
+export const ObservedEmployerType = {
+  DIRECT: "direct",
+  AGENCY: "agency",
+  UNKNOWN: "unknown",
+} as const;
+export type ObservedEmployerType =
+  (typeof ObservedEmployerType)[keyof typeof ObservedEmployerType];
+
+// Raw source text retention (guardrail: facts only, text purged)
+export const RAW_TEXT_TTL_DAYS = 30;
+
+// --- Role families (fixed taxonomy for target sectors) ---
+export const ROLE_FAMILIES = [
+  { key: "warehouse_worker", label_he: "מחסנאי/ת" },
+  { key: "order_picker", label_he: "מלקט/ת" },
+  { key: "forklift_operator", label_he: "מלגזן/ית" },
+  { key: "packer", label_he: "אורז/ת" },
+  { key: "logistics_coordinator", label_he: "רכז/ת לוגיסטיקה" },
+  { key: "delivery_driver", label_he: "נהג/ת חלוקה" },
+  { key: "courier", label_he: "שליח/ה" },
+  { key: "production_worker", label_he: "עובד/ת ייצור" },
+  { key: "machine_operator", label_he: "מפעיל/ת מכונה" },
+  { key: "quality_control", label_he: "בקר/ית איכות" },
+  { key: "call_center_rep", label_he: "נציג/ת מוקד" },
+  { key: "customer_service", label_he: "נציג/ת שירות לקוחות" },
+  { key: "tech_support", label_he: "נציג/ת תמיכה טכנית" },
+  { key: "telesales", label_he: "מכירות טלפוניות" },
+  { key: "back_office", label_he: "בק אופיס" },
+  { key: "receptionist", label_he: "פקיד/ת קבלה" },
+  { key: "cleaner", label_he: "עובד/ת ניקיון" },
+  { key: "security_guard", label_he: "מאבטח/ת" },
+  { key: "general_labor", label_he: "עבודה כללית" },
+  { key: "other", label_he: "אחר" },
+] as const;
+export type RoleFamilyKey = (typeof ROLE_FAMILIES)[number]["key"];
+
+// --- Regions (launch-cell geography) ---
+export const GROWTH_REGIONS = [
+  { key: "tel_aviv", label_he: "תל אביב והמרכז" },
+  { key: "shfela_ashdod", label_he: "אשדוד והשפלה" },
+  { key: "sharon", label_he: "השרון" },
+  { key: "jerusalem", label_he: "ירושלים והסביבה" },
+  { key: "south", label_he: "דרום ובאר שבע" },
+  { key: "haifa_krayot", label_he: "חיפה והקריות" },
+  { key: "north", label_he: "צפון" },
+  { key: "other", label_he: "אחר" },
+] as const;
+export type GrowthRegionKey = (typeof GROWTH_REGIONS)[number]["key"];
+
+// --- Growth audit actions (mandatory-logging list per spec) ---
+export const GrowthAuditAction = {
+  AUTHZ_DENIED: "AUTHZ_DENIED",
+  ROLE_GRANTED: "ROLE_GRANTED",
+  ROLE_REVOKED: "ROLE_REVOKED",
+  SOURCE_STATUS_CHANGED: "SOURCE_STATUS_CHANGED",
+  AD_TRANSITION: "AD_TRANSITION",
+  PUBLICATION_RECORDED: "PUBLICATION_RECORDED",
+  PII_UNMASKED: "PII_UNMASKED",
+  CV_ACCESSED: "CV_ACCESSED",
+  EXPORT_REQUESTED: "EXPORT_REQUESTED",
+  PURGE_RUN: "PURGE_RUN",
+  CONSENT_CHANGED: "CONSENT_CHANGED",
+} as const;
+export type GrowthAuditAction =
+  (typeof GrowthAuditAction)[keyof typeof GrowthAuditAction];
+
 // --- Configuration ---
 export const Config = {
   // Trust
