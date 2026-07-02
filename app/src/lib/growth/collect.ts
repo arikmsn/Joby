@@ -8,6 +8,12 @@
 // Dedup: content-hash based (sha256 of channel + normalized text) so
 // re-runs and unchanged pages never create duplicate queue rows; the
 // unique index on source_jobs.dedup_hash enforces it at insert time.
+//
+// Relevance: per-source interest config (source-config.ts) — exclude
+// keywords are a hard gate, include keywords are hard only when the
+// source sets hard_keyword_filter, everything else is priority scoring.
+// Sources with no configured keywords fall back to the global
+// GROWTH_COLLECTOR_KEYWORDS gate (telegram/gov only).
 // ============================================================
 
 import { createHash } from "crypto";
@@ -19,12 +25,20 @@ import {
   SourceChannelType,
 } from "@/lib/constants";
 import { guardedFetchText, htmlToText, FetchGuardError } from "./fetcher";
+import {
+  SourceConfig,
+  parseSourceConfig,
+  applyInterestFilter,
+} from "./source-config";
+import { crawlSource } from "./crawler";
 
 export interface CollectorChannel {
   id: string;
   type: string;
   name: string;
   url: string | null;
+  crawl_enabled?: boolean;
+  config?: unknown;
 }
 
 export interface ChannelCollectResult {
@@ -32,11 +46,40 @@ export interface ChannelCollectResult {
   fetched: number;
   ingested: number;
   duplicates: number;
+  filtered: number;
+  pages_crawled?: number;
+  urls_discovered?: number;
   error?: string;
 }
 
 export function matchesKeywords(text: string): boolean {
   return GROWTH_COLLECTOR_KEYWORDS.some((kw) => text.includes(kw));
+}
+
+/**
+ * Relevance decision for one item of text under a source's interest config.
+ * Falls back to the global keyword gate when no keywords are configured.
+ */
+function checkRelevance(
+  text: string,
+  config: SourceConfig,
+  fallbackKeywordGate: boolean
+): { passed: boolean; priority: number } {
+  const interest = config.interest;
+  const hasCustom =
+    interest.include_keywords.length > 0 ||
+    interest.exclude_keywords.length > 0 ||
+    interest.role_families.length > 0 ||
+    interest.cities.length > 0;
+
+  if (hasCustom) {
+    const res = applyInterestFilter(text, interest);
+    return { passed: res.passed, priority: res.priority };
+  }
+  if (fallbackKeywordGate) {
+    return { passed: matchesKeywords(text), priority: 0 };
+  }
+  return { passed: true, priority: 0 };
 }
 
 function contentHash(channelId: string, text: string): string {
@@ -62,7 +105,8 @@ function titleFrom(text: string): string {
 export async function ingestRawItem(
   channelId: string,
   text: string,
-  sourceRef: string | null
+  sourceRef: string | null,
+  priority = 0
 ): Promise<"ingested" | "duplicate"> {
   const trimmed = text.trim();
   const result = await db
@@ -75,6 +119,7 @@ export async function ingestRawItem(
       region_code: "other",
       employer_type: "unknown",
       urgency_score: 0,
+      priority_score: Math.max(0, Math.min(priority, 100)),
       source_ref: sourceRef,
       raw_text: trimmed.slice(0, 20000),
       raw_text_expires_at: new Date(
@@ -89,41 +134,49 @@ export async function ingestRawItem(
 }
 
 // --- Telegram public channels ---
-// Reads the public web preview (t.me/s/<name>) of an APPROVED channel and
-// extracts message texts. Keyword-filtered to control queue noise.
 const TG_MESSAGE_RE =
   /<div class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)<\/div>/g;
 
 async function collectTelegram(
-  channel: CollectorChannel
+  channel: CollectorChannel,
+  config: SourceConfig
 ): Promise<ChannelCollectResult> {
   const url = channel.url ?? "";
   const host = new URL(url).hostname;
   const { text: html } = await guardedFetchText(url, [host]);
 
-  const messages: string[] = [];
+  const candidates: { text: string; priority: number }[] = [];
+  let filtered = 0;
   let m: RegExpExecArray | null;
+  TG_MESSAGE_RE.lastIndex = 0;
   while ((m = TG_MESSAGE_RE.exec(html)) !== null) {
     const msgText = htmlToText(m[1]);
-    if (msgText.length >= 30 && matchesKeywords(msgText)) messages.push(msgText);
+    if (msgText.length < 30) continue;
+    const rel = checkRelevance(msgText, config, true);
+    if (rel.passed) candidates.push({ text: msgText, priority: rel.priority });
+    else filtered++;
   }
 
   let ingested = 0;
   let duplicates = 0;
-  for (const msg of messages.slice(-30)) {
-    const outcome = await ingestRawItem(channel.id, msg, url);
+  for (const msg of candidates.slice(-30)) {
+    const outcome = await ingestRawItem(channel.id, msg.text, url, msg.priority);
     if (outcome === "ingested") ingested++;
     else duplicates++;
   }
-  return { channel_id: channel.id, fetched: messages.length, ingested, duplicates };
+  return {
+    channel_id: channel.id,
+    fetched: candidates.length,
+    ingested,
+    duplicates,
+    filtered,
+  };
 }
 
 // --- Government / open data ---
-// Channel URL points at a JSON endpoint (e.g., a data.gov.il CKAN
-// datastore_search URL, configured per channel by ops). Each record
-// becomes one keyword-filtered raw item.
 async function collectGov(
-  channel: CollectorChannel
+  channel: CollectorChannel,
+  config: SourceConfig
 ): Promise<ChannelCollectResult> {
   const url = channel.url ?? "";
   const host = new URL(url).hostname;
@@ -141,6 +194,7 @@ async function collectGov(
       fetched: 0,
       ingested: 0,
       duplicates: 0,
+      filtered: 0,
       error: "response is not valid JSON",
     };
   }
@@ -148,24 +202,28 @@ async function collectGov(
   let ingested = 0;
   let duplicates = 0;
   let matched = 0;
+  let filtered = 0;
   for (const record of records.slice(0, 100)) {
     const asText = Object.entries(record as Record<string, unknown>)
       .map(([k, v]) => `${k}: ${String(v ?? "")}`)
       .join("\n");
-    if (!matchesKeywords(asText)) continue;
+    const rel = checkRelevance(asText, config, true);
+    if (!rel.passed) {
+      filtered++;
+      continue;
+    }
     matched++;
-    const outcome = await ingestRawItem(channel.id, asText, url);
+    const outcome = await ingestRawItem(channel.id, asText, url, rel.priority);
     if (outcome === "ingested") ingested++;
     else duplicates++;
   }
-  return { channel_id: channel.id, fetched: matched, ingested, duplicates };
+  return { channel_id: channel.id, fetched: matched, ingested, duplicates, filtered };
 }
 
-// --- Employer career pages ---
-// Curated per-employer pages: fetch, strip to text, ingest the page as one
-// raw item. Content-hash dedup means unchanged pages produce nothing new.
+// --- Employer career pages (single page — crawl-disabled path) ---
 async function collectCareerPage(
-  channel: CollectorChannel
+  channel: CollectorChannel,
+  config: SourceConfig
 ): Promise<ChannelCollectResult> {
   const url = channel.url ?? "";
   const host = new URL(url).hostname;
@@ -178,20 +236,27 @@ async function collectCareerPage(
       fetched: 0,
       ingested: 0,
       duplicates: 0,
+      filtered: 0,
       error: "page text too short (JS-rendered page?)",
     };
   }
 
-  const outcome = await ingestRawItem(channel.id, pageText, url);
+  const rel = checkRelevance(pageText, config, false);
+  if (!rel.passed) {
+    return { channel_id: channel.id, fetched: 1, ingested: 0, duplicates: 0, filtered: 1 };
+  }
+
+  const outcome = await ingestRawItem(channel.id, pageText, url, rel.priority);
   return {
     channel_id: channel.id,
     fetched: 1,
     ingested: outcome === "ingested" ? 1 : 0,
     duplicates: outcome === "duplicate" ? 1 : 0,
+    filtered: 0,
   };
 }
 
-/** Dispatch one approved channel to its per-type collector. */
+/** Dispatch one approved channel to its collector (crawler when enabled). */
 export async function collectChannel(
   channel: CollectorChannel
 ): Promise<ChannelCollectResult> {
@@ -201,23 +266,46 @@ export async function collectChannel(
       fetched: 0,
       ingested: 0,
       duplicates: 0,
+      filtered: 0,
       error: "channel has no URL",
     };
   }
+  const config = parseSourceConfig(channel.config);
   try {
+    // Config-driven crawling for site-type sources
+    if (
+      channel.crawl_enabled &&
+      (channel.type === SourceChannelType.CAREER_PAGE ||
+        channel.type === SourceChannelType.OTHER ||
+        channel.type === SourceChannelType.AGENCY)
+    ) {
+      const crawl = await crawlSource(channel, config, { dryRun: false });
+      return {
+        channel_id: channel.id,
+        fetched: crawl.pages_crawled,
+        ingested: crawl.ingested,
+        duplicates: crawl.duplicates,
+        filtered: crawl.filtered_out,
+        pages_crawled: crawl.pages_crawled,
+        urls_discovered: crawl.urls_discovered,
+        error: crawl.error,
+      };
+    }
+
     switch (channel.type) {
       case SourceChannelType.TELEGRAM:
-        return await collectTelegram(channel);
+        return await collectTelegram(channel, config);
       case SourceChannelType.GOV:
-        return await collectGov(channel);
+        return await collectGov(channel, config);
       case SourceChannelType.CAREER_PAGE:
-        return await collectCareerPage(channel);
+        return await collectCareerPage(channel, config);
       default:
         return {
           channel_id: channel.id,
           fetched: 0,
           ingested: 0,
           duplicates: 0,
+          filtered: 0,
           error: `type ${channel.type} is not collectable (manual only)`,
         };
     }
@@ -228,6 +316,13 @@ export async function collectChannel(
         : err instanceof Error
           ? err.message
           : "unknown error";
-    return { channel_id: channel.id, fetched: 0, ingested: 0, duplicates: 0, error: message };
+    return {
+      channel_id: channel.id,
+      fetched: 0,
+      ingested: 0,
+      duplicates: 0,
+      filtered: 0,
+      error: message,
+    };
   }
 }

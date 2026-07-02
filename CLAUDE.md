@@ -40,6 +40,13 @@ cd app && npm run check:growth-authz # Growth route authz gate (CI)
 - Growth UI strings: `app/src/lib/i18n/he-growth.ts` (admin-only namespace, not he.ts).
 - Candidate PII is masked by default (`lib/growth/dto.ts`); source raw_text is TTL-purged (30d) by
   the cron job at `/api/admin/growth/jobs/purge`.
+- Collection is admin-configurable (Stage 1f): per-source crawl config lives in
+  `source_channels.config` (jsonb, validated by `sourceConfigSchema` in `lib/growth/source-config.ts`).
+  The config-driven crawler (`lib/growth/crawler.ts`) does BFS within the SSRF guard, honors
+  include/exclude rules (seeds respect exclusions), robots.txt, and interest filters (exclude keywords
+  = hard gate; everything else = priority scoring). Job runners in `lib/growth/runners.ts` are shared
+  by cron routes and admin "run now"/system-jobs; per-source scheduling via `next_run_at` + hours window.
+  All crawling is dry-run testable via `/growth/sources/[id]` (test mode persists nothing).
 ## Migration Safety Policy
 - **Never** use `drizzle-kit push --force` in this repo — it auto-accepts destructive
   statements (it has offered to TRUNCATE `users` here).

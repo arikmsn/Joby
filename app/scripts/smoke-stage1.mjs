@@ -48,6 +48,13 @@ const [chProposed] = await sql(
    returning id`
 );
 
+// Always-on collection window so the scheduled runner is deterministic
+// regardless of the hour this test runs (Stage-1f added window gating).
+await sql(
+  `update source_channels set config = '{"schedule":{"window_start_hour":0,"window_end_hour":0}}'::jsonb
+   where name like 'SMOKE%'`
+);
+
 await sql(`update users set admin_sub_role='super_admin' where id=$1`, [adminId]);
 const token = await new SignJWT({ sub: adminId, role: "admin" })
   .setProtectedHeader({ alg: "HS256" }).setIssuedAt()
@@ -79,10 +86,15 @@ try {
   assert("raw_text stored with TTL", rawRows[0].has_raw && rawRows[0].has_ttl);
 
   // 3. Dedup: second run ingests nothing new for unchanged page
+  // Force the channel due again (first run scheduled next_run_at 12h ahead)
+  await sql(`update source_channels set next_run_at = null where id=$1`, [chGood.id]);
   const run2 = await runJob("collect");
   const run2Body = await run2.json();
   const goodRes2 = run2Body.results?.find((r) => r.channel_id === chGood.id);
-  assert("re-run dedups unchanged page", goodRes2?.ingested === 0 && goodRes2?.duplicates === 1, JSON.stringify(goodRes2));
+  const rowsAfterRerun = (await sql(
+    `select count(*)::int as n from source_jobs where channel_id=$1`, [chGood.id]))[0].n;
+  assert("re-run dedups unchanged page (ingested 0, still 1 row)",
+    goodRes2?.ingested === 0 && rowsAfterRerun === 1, JSON.stringify(goodRes2));
 
   // 4. Freshness bookkeeping
   const [chRow] = await sql(

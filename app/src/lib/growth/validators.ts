@@ -39,6 +39,30 @@ export const sourceChannelStatusSchema = z.object({
   note: z.string().max(1000).optional(),
 });
 
+// Update a channel's editable fields + crawl config (Stage 1f).
+// `config` is validated against sourceConfigSchema in the handler.
+export const updateSourceChannelSchema = z.object({
+  name: z.string().min(2).max(255).optional(),
+  url: z.string().url().max(2000).optional().nullable(),
+  robots_tos_notes: z.string().max(4000).optional().nullable(),
+  crawl_enabled: z.boolean().optional(),
+  config: z.unknown().optional(),
+});
+
+export const testSourceSchema = z.object({
+  // optional inline config override for the dry-run; falls back to stored config
+  config: z.unknown().optional(),
+});
+
+export const systemJobSchema = z.object({
+  job: z.enum(["collect", "cluster", "purge"]),
+});
+
+export const runsFilterSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
 export const sourceChannelFilterSchema = z.object({
   status: z.nativeEnum(SourceChannelStatus).optional(),
   type: z.nativeEnum(SourceChannelType).optional(),

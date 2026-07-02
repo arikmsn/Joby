@@ -67,13 +67,15 @@ export const GET = withGrowthAuth(
           source_ref: sourceJobs.source_ref,
           raw_text: rawTextWithinTtl,
           extraction_confidence: sourceJobs.extraction_confidence,
+          priority_score: sourceJobs.priority_score,
           needs_review: sourceJobs.needs_review,
           created_at: sourceJobs.created_at,
         })
         .from(sourceJobs)
         .leftJoin(sourceChannels, eq(sourceJobs.channel_id, sourceChannels.id))
         .where(where)
-        .orderBy(desc(sourceJobs.observed_at))
+        // priority first (interest scoring), then most-recent
+        .orderBy(desc(sourceJobs.priority_score), desc(sourceJobs.observed_at))
         .limit(limit)
         .offset(offset),
       db

@@ -43,6 +43,7 @@ export const GET = withGrowthAuth(
           risk_tier: sourceChannels.risk_tier,
           status: sourceChannels.status,
           robots_tos_notes: sourceChannels.robots_tos_notes,
+          crawl_enabled: sourceChannels.crawl_enabled,
           approved_at: sourceChannels.approved_at,
           created_at: sourceChannels.created_at,
           approved_by_name: users.full_name,

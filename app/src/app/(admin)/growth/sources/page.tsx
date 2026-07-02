@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useGrowthAccess } from "../use-growth-access";
 import { tGrowth } from "@/lib/i18n/he-growth";
@@ -8,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, ShieldAlert } from "lucide-react";
+import { Plus, ShieldAlert, Play, Settings, Database } from "lucide-react";
 import {
   SourceChannelType,
   CollectionMethod,
@@ -26,6 +27,7 @@ interface SourceChannelRow {
   risk_tier: string;
   status: string;
   robots_tos_notes: string | null;
+  crawl_enabled: boolean;
   approved_at: string | null;
   approved_by_name: string | null;
   created_at: string;
@@ -80,6 +82,7 @@ export default function GrowthSourcesPage() {
 
   const canApprove =
     subRole === GrowthSubRole.SUPER_ADMIN || subRole === GrowthSubRole.GROWTH_OPS;
+  const isSuper = subRole === GrowthSubRole.SUPER_ADMIN;
 
   const load = useCallback(() => {
     if (!token) return;
@@ -148,6 +151,55 @@ export default function GrowthSourcesPage() {
     }
   }
 
+  const [runNote, setRunNote] = useState("");
+  async function runNow(id: string) {
+    setSaving(true);
+    setError("");
+    setRunNote("");
+    try {
+      const res = await fetch(`/api/admin/growth/sources/${id}/run`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || tGrowth("growth.error"));
+        return;
+      }
+      setRunNote(
+        `${tGrowth("growth.sources.run_done")}: +${data.ingested}${data.error ? ` (${data.error})` : ""}`
+      );
+      load();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function systemJob(job: "collect" | "cluster" | "purge") {
+    setSaving(true);
+    setError("");
+    setRunNote("");
+    try {
+      const res = await fetch("/api/admin/growth/system-jobs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ job }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || tGrowth("growth.error"));
+        return;
+      }
+      setRunNote(`${tGrowth("growth.sources.run_done")}: ${JSON.stringify(data)}`);
+      load();
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (!accessLoading && !hasAccess) {
     return (
       <p className="py-16 text-center text-foreground-secondary">
@@ -158,9 +210,34 @@ export default function GrowthSourcesPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-foreground">
-        {tGrowth("growth.sources.title")}
-      </h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-foreground">
+          {tGrowth("growth.sources.title")}
+        </h1>
+        {isSuper && (
+          <div className="flex flex-wrap gap-2">
+            <span className="text-sm text-foreground-tertiary self-center">
+              {tGrowth("growth.sources.system_jobs")}:
+            </span>
+            <Button size="sm" variant="secondary" onClick={() => systemJob("collect")} loading={saving}>
+              <Database className="h-4 w-4" />
+              {tGrowth("growth.sources.run_collect")}
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => systemJob("cluster")} loading={saving}>
+              {tGrowth("growth.sources.run_cluster")}
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => systemJob("purge")} loading={saving}>
+              {tGrowth("growth.sources.run_purge")}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {runNote && (
+        <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 break-all">
+          {runNote}
+        </p>
+      )}
 
       <Card className="space-y-3">
         <h2 className="font-semibold text-foreground">
@@ -290,26 +367,48 @@ export default function GrowthSourcesPage() {
               >
                 {STATUS_LABELS[row.status] ?? row.status}
               </Badge>
-              {canApprove && row.status !== SourceChannelStatus.APPROVED && (
-                <Button
-                  size="sm"
-                  variant="success"
-                  onClick={() => setStatus(row.id, SourceChannelStatus.APPROVED)}
-                  loading={saving}
-                >
-                  {tGrowth("growth.sources.approve")}
-                </Button>
+              {row.crawl_enabled && (
+                <Badge variant="info">{tGrowth("growth.sources.crawl_on")}</Badge>
               )}
-              {canApprove && row.status === SourceChannelStatus.APPROVED && (
-                <Button
-                  size="sm"
-                  variant="danger"
-                  onClick={() => setStatus(row.id, SourceChannelStatus.PAUSED)}
-                  loading={saving}
-                >
-                  {tGrowth("growth.sources.pause")}
-                </Button>
-              )}
+              <div className="flex flex-wrap gap-1.5">
+                <Link href={`/growth/sources/${row.id}`}>
+                  <Button size="sm" variant="secondary">
+                    <Settings className="h-4 w-4" />
+                    {tGrowth("growth.sources.details")}
+                  </Button>
+                </Link>
+                {canApprove && row.status === SourceChannelStatus.APPROVED && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => runNow(row.id)}
+                    loading={saving}
+                  >
+                    <Play className="h-4 w-4" />
+                    {tGrowth("growth.sources.run_now")}
+                  </Button>
+                )}
+                {canApprove && row.status !== SourceChannelStatus.APPROVED && (
+                  <Button
+                    size="sm"
+                    variant="success"
+                    onClick={() => setStatus(row.id, SourceChannelStatus.APPROVED)}
+                    loading={saving}
+                  >
+                    {tGrowth("growth.sources.approve")}
+                  </Button>
+                )}
+                {canApprove && row.status === SourceChannelStatus.APPROVED && (
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() => setStatus(row.id, SourceChannelStatus.PAUSED)}
+                    loading={saving}
+                  >
+                    {tGrowth("growth.sources.pause")}
+                  </Button>
+                )}
+              </div>
             </Card>
           ))}
         </div>

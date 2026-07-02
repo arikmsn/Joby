@@ -43,8 +43,9 @@ for (const file of routeFiles) {
   const rel = relative(process.cwd(), file);
 
   // Cron job routes (growth/jobs/*) are machine-triggered: they must use the
-  // cron secret (isAuthorizedCronRequest), not a user JWT.
-  if (rel.includes("jobs")) {
+  // cron secret (isAuthorizedCronRequest), not a user JWT. Match the jobs
+  // directory specifically — not e.g. system-jobs (a normal wrapped route).
+  if (/[\\/]growth[\\/]jobs[\\/]/.test(rel)) {
     if (!src.includes("isAuthorizedCronRequest")) {
       failures.push(`${rel}: cron route must call isAuthorizedCronRequest`);
     }

@@ -358,9 +358,44 @@ export const sourceChannels = pgTable("source_channels", {
   // last successful collector visit (also set on zero-yield runs) — drives freshness
   last_collected_at: timestamp("last_collected_at", { withTimezone: true }),
   last_collect_error: text("last_collect_error"),
+  // Admin-configurable crawling (Stage 1f). `config` is validated by
+  // sourceConfigSchema (lib/growth/source-config.ts) — never trusted raw.
+  crawl_enabled: boolean("crawl_enabled").notNull().default(false),
+  config: jsonb("config"),
+  next_run_at: timestamp("next_run_at", { withTimezone: true }),
+  consecutive_failures: integer("consecutive_failures").notNull().default(0),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
+
+// --- Collector runs (IO) — per-source and system-job run history ---
+export const collectorRuns = pgTable(
+  "collector_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    channel_id: uuid("channel_id").references(() => sourceChannels.id, {
+      onDelete: "cascade",
+    }),
+    job: varchar("job", { length: 30 }).notNull(), // collect_channel | collect | cluster | purge | test
+    trigger: varchar("trigger", { length: 10 }).notNull(), // cron | manual | test
+    status: varchar("status", { length: 15 }).notNull().default("running"),
+    started_at: timestamp("started_at", { withTimezone: true }).defaultNow(),
+    finished_at: timestamp("finished_at", { withTimezone: true }),
+    pages_crawled: integer("pages_crawled").notNull().default(0),
+    urls_discovered: integer("urls_discovered").notNull().default(0),
+    items_ingested: integer("items_ingested").notNull().default(0),
+    duplicates: integer("duplicates").notNull().default(0),
+    filtered_out: integer("filtered_out").notNull().default(0),
+    error: text("error"),
+    stats: jsonb("stats"),
+    triggered_by: uuid("triggered_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+  },
+  (t) => ({
+    channelIdx: index("collector_runs_channel_idx").on(t.channel_id, t.started_at),
+  })
+);
 
 // --- Source jobs / observations (RI) — facts only; raw_text auto-purged ≤30d ---
 export const sourceJobs = pgTable(
@@ -383,6 +418,8 @@ export const sourceJobs = pgTable(
     shift_tags: text("shift_tags").array().notNull().default([]),
     requirement_flags: text("requirement_flags").array().notNull().default([]),
     urgency_score: integer("urgency_score").notNull().default(0),
+    // Interest-filter priority (0-100) — orders the review queue, never a hard gate
+    priority_score: integer("priority_score").notNull().default(0),
     source_ref: text("source_ref"),
     raw_text: text("raw_text"),
     raw_text_expires_at: timestamp("raw_text_expires_at", { withTimezone: true }),

@@ -3,6 +3,7 @@ import { eq, and, ne, desc, sql, gte, isNotNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { sourceJobs, sourceChannels, demandClusters } from "@/lib/schema";
 import { withGrowthAuth } from "@/lib/growth/auth";
+import { parseSourceConfig } from "@/lib/growth/source-config";
 import { GrowthPermission, SourceChannelStatus } from "@/lib/constants";
 
 // GET /api/admin/growth/metrics — Stage-1 collection-health panel.
@@ -14,7 +15,6 @@ export const GET = withGrowthAuth(
     const now = Date.now();
     const dayAgo = new Date(now - 24 * 60 * 60 * 1000);
     const week = new Date(now - 7 * 24 * 60 * 60 * 1000);
-    const twoDays = new Date(now - 48 * 60 * 60 * 1000);
 
     const [
       obsToday,
@@ -64,6 +64,7 @@ export const GET = withGrowthAuth(
           collection_method: sourceChannels.collection_method,
           last_collected_at: sourceChannels.last_collected_at,
           last_collect_error: sourceChannels.last_collect_error,
+          config: sourceChannels.config,
         })
         .from(sourceChannels)
         .where(eq(sourceChannels.status, SourceChannelStatus.APPROVED)),
@@ -99,7 +100,8 @@ export const GET = withGrowthAuth(
     ]);
 
     // Freshness: automated channels by last_collected_at; manual channels by
-    // last observation. ≤48h counts as fresh.
+    // last observation. Fresh if within the channel's configured stale
+    // threshold (default 48h).
     const yieldByChannel = new Map(
       channelYield.map((y) => [y.channel_id, y])
     );
@@ -111,6 +113,8 @@ export const GET = withGrowthAuth(
             ? new Date(y.last_observed_at)
             : null
           : c.last_collected_at;
+      const staleHours = parseSourceConfig(c.config).stale_threshold_hours;
+      const staleBefore = new Date(now - staleHours * 60 * 60 * 1000);
       return {
         id: c.id,
         name: c.name,
@@ -118,7 +122,8 @@ export const GET = withGrowthAuth(
         collection_method: c.collection_method,
         yield_7d: y?.count_7d ?? 0,
         last_signal_at: lastSignal,
-        fresh: !!lastSignal && lastSignal >= twoDays,
+        fresh: !!lastSignal && lastSignal >= staleBefore,
+        stale_threshold_hours: staleHours,
         error: c.last_collect_error,
       };
     });
