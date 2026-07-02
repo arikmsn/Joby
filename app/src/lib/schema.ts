@@ -355,6 +355,9 @@ export const sourceChannels = pgTable("source_channels", {
   created_by: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
   approved_by: uuid("approved_by").references(() => users.id, { onDelete: "set null" }),
   approved_at: timestamp("approved_at", { withTimezone: true }),
+  // last successful collector visit (also set on zero-yield runs) — drives freshness
+  last_collected_at: timestamp("last_collected_at", { withTimezone: true }),
+  last_collect_error: text("last_collect_error"),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });

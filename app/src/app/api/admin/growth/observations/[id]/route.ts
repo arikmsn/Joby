@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { sourceJobs } from "@/lib/schema";
 import { withGrowthAuth } from "@/lib/growth/auth";
@@ -73,7 +73,10 @@ export const PATCH = withGrowthAuth(
           ? {
               needs_review: false,
               review_resolved_by: actor.id,
-              review_resolved_at: new Date(),
+              // DB clock, not app clock — created_at is DB-set, and the
+              // review-time metric subtracts the two (clock skew made
+              // durations negative when this used new Date())
+              review_resolved_at: sql`now()`,
             }
           : {}),
         updated_at: new Date(),

@@ -426,6 +426,30 @@ export const INTAKE_RATE_LIMITS = {
   PER_IP_PER_HOUR: 10,
 } as const;
 
+// --- Collector keyword filter (Hebrew, target sectors) ---
+// telegram/gov items must match ≥1 keyword to enter the review queue;
+// career pages are curated per-employer so the whole page is ingested.
+export const GROWTH_COLLECTOR_KEYWORDS = [
+  "דרוש",
+  "דרושים",
+  "משרה",
+  "מחסן",
+  "מלקט",
+  "מלגז",
+  "מוקד",
+  "נציג",
+  "שירות לקוחות",
+  "ייצור",
+  "שליח",
+  "נהג",
+  "לוגיסטיקה",
+  "אריזה",
+  "אורז",
+  "קופאי",
+  "תמיכה",
+  "משמרות",
+] as const;
+
 // --- Growth audit actions (mandatory-logging list per spec) ---
 export const GrowthAuditAction = {
   AUTHZ_DENIED: "AUTHZ_DENIED",
@@ -439,6 +463,8 @@ export const GrowthAuditAction = {
   EXPORT_REQUESTED: "EXPORT_REQUESTED",
   PURGE_RUN: "PURGE_RUN",
   CONSENT_CHANGED: "CONSENT_CHANGED",
+  COLLECT_RUN: "COLLECT_RUN",
+  CLUSTER_RUN: "CLUSTER_RUN",
 } as const;
 export type GrowthAuditAction =
   (typeof GrowthAuditAction)[keyof typeof GrowthAuditAction];

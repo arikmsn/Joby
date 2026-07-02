@@ -19,6 +19,7 @@ import {
   Radar,
   ClipboardList,
   Inbox,
+  Activity,
 } from "lucide-react";
 import { NavLink } from "./nav-link";
 import { useAuth } from "@/lib/auth-context";
@@ -51,6 +52,11 @@ const GROWTH_NAV_ITEMS = [
     href: "/growth/intake",
     icon: Inbox,
     label: tGrowth("growth.nav.intake"),
+  },
+  {
+    href: "/growth/metrics",
+    icon: Activity,
+    label: tGrowth("growth.nav.metrics"),
   },
 ];
 
