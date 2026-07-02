@@ -74,6 +74,22 @@ const growthStrings = {
   "growth.obs.saved": "התצפית נשמרה",
   "growth.obs.empty": "אין תצפיות עדיין",
 
+  // Intake review queue
+  "growth.nav.intake": "קליטת מועמדים",
+  "growth.intake.title": "קליטת מועמדים",
+  "growth.intake.pending": "ממתינים לבדיקה",
+  "growth.intake.all": "הכל",
+  "growth.intake.reviewed": "נבדק",
+  "growth.intake.flagged": "מסומן",
+  "growth.intake.mark_reviewed": "סימון כנבדק",
+  "growth.intake.mark_flagged": "סימון לבירור",
+  "growth.intake.unmask": "חשיפת פרטי קשר",
+  "growth.intake.unmask_reason": "נימוק לחשיפה (חובה, נרשם ביומן)",
+  "growth.intake.completeness": "שלמות",
+  "growth.intake.consent_marketing": "הסכמת דיוור",
+  "growth.intake.empty": "אין הגשות עדיין",
+  "growth.intake.submitted_at": "הוגש",
+
   // Shared
   "growth.save": "שמירה",
   "growth.cancel": "ביטול",

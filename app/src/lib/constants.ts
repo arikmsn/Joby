@@ -393,6 +393,39 @@ export const GROWTH_REGIONS = [
 ] as const;
 export type GrowthRegionKey = (typeof GROWTH_REGIONS)[number]["key"];
 
+// --- Candidate submission review status ---
+export const SubmissionReviewStatus = {
+  PENDING: "PENDING",
+  REVIEWED: "REVIEWED",
+  FLAGGED: "FLAGGED",
+} as const;
+export type SubmissionReviewStatus =
+  (typeof SubmissionReviewStatus)[keyof typeof SubmissionReviewStatus];
+
+// --- Intake experience levels (stored inside availability jsonb) ---
+export const INTAKE_EXPERIENCE_LEVELS = [
+  { key: "none", label_he: "ללא ניסיון" },
+  { key: "lt1", label_he: "עד שנה" },
+  { key: "1to3", label_he: "שנה עד 3 שנים" },
+  { key: "gt3", label_he: "מעל 3 שנים" },
+] as const;
+export type IntakeExperienceKey =
+  (typeof INTAKE_EXPERIENCE_LEVELS)[number]["key"];
+
+// --- Intake shift-availability options (public form) ---
+export const INTAKE_SHIFT_OPTIONS = [
+  { key: "morning", label_he: "בוקר" },
+  { key: "evening", label_he: "ערב" },
+  { key: "night", label_he: "לילה" },
+  { key: "weekend", label_he: "סופ״ש" },
+] as const;
+
+// Intake rate limits (per hashed key, DB-backed — serverless-safe)
+export const INTAKE_RATE_LIMITS = {
+  PER_PHONE_PER_HOUR: 3,
+  PER_IP_PER_HOUR: 10,
+} as const;
+
 // --- Growth audit actions (mandatory-logging list per spec) ---
 export const GrowthAuditAction = {
   AUTHZ_DENIED: "AUTHZ_DENIED",

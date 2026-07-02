@@ -101,6 +101,48 @@ export const observationFilterSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+// --- Public intake (the ONLY public write surface) ---
+
+const IL_PHONE_RE = /^(\+972|0)5\d{8}$/;
+
+export const publicIntakeSchema = z.object({
+  full_name: z.string().min(2, "שם מלא נדרש").max(255),
+  phone: z
+    .string()
+    .transform((s) => s.replace(/[\s-]/g, ""))
+    .pipe(z.string().regex(IL_PHONE_RE, "מספר טלפון נייד לא תקין")),
+  city: z.string().min(2, "עיר נדרשת").max(100),
+  role_families: z.array(roleFamilySchema).min(1, "בחרו תחום אחד לפחות").max(5),
+  shifts: z.array(z.enum(["morning", "evening", "night", "weekend"])).max(4).default([]),
+  experience: z.enum(["none", "lt1", "1to3", "gt3"]).optional(),
+  consent_privacy: z.literal(true, {
+    errorMap: () => ({ message: "נדרשת הסכמה למדיניות הפרטיות" }),
+  }),
+  consent_marketing: z.boolean().default(false),
+  landing_page_slug: z.string().min(1).max(100),
+  // Honeypot — humans never fill this; bots do. Non-empty → silent drop.
+  website: z.string().max(200).optional().default(""),
+});
+export type PublicIntakeInput = z.infer<typeof publicIntakeSchema>;
+
+// --- Intake review queue (admin) ---
+
+export const intakeFilterSchema = z.object({
+  review_status: z.enum(["PENDING", "REVIEWED", "FLAGGED"]).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const intakeReviewSchema = z.object({
+  review_status: z.enum(["REVIEWED", "FLAGGED"]),
+  role_families: z.array(roleFamilySchema).min(1).max(5).optional(),
+  quality_score: z.number().int().min(0).max(100).optional(),
+});
+
+export const unmaskSchema = z.object({
+  reason: z.string().min(5, "נדרש נימוק לחשיפת פרטים").max(500),
+});
+
 // --- Roles (super_admin only) ---
 
 export const growthRoleSchema = z.object({

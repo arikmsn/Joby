@@ -847,6 +847,23 @@ const he = {
   "feed.tab_favorites": "שמורות",
   "feed.no_favorites": "אין משרות שמורות",
   "feed.no_favorites_sub": "סמן/י כוכב על משרה כדי לשמור אותה לכאן לצפייה מהירה",
+
+  // --- Candidate landing pages (public intake — Growth W2) ---
+  "lp.form_title": "השאירו פרטים ונחזור אליכם",
+  "lp.full_name": "שם מלא",
+  "lp.phone": "טלפון נייד",
+  "lp.city": "עיר מגורים",
+  "lp.role_families": "תחומים שמעניינים אותך",
+  "lp.shifts": "זמינות למשמרות",
+  "lp.experience": "ניסיון",
+  "lp.consent_privacy": "קראתי ואני מסכים/ה למדיניות הפרטיות של Joby",
+  "lp.consent_marketing": "אני מאשר/ת קבלת עדכונים על משרות רלוונטיות (SMS/WhatsApp)",
+  "lp.submit": "הרשמה",
+  "lp.success_title": "נרשמת בהצלחה!",
+  "lp.success_body": "נחזור אליך כשתהיה משרה מתאימה באזורך",
+  "lp.trust_line": "ללא עלות · ללא התחייבות",
+  "lp.error_generic": "אירעה שגיאה. נסו שוב",
+  "lp.error_rate_limited": "נשלחו יותר מדי בקשות. נסו שוב מאוחר יותר",
 } as const;
 
 export type TranslationKey = keyof typeof he;

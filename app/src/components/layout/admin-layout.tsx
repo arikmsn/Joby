@@ -18,6 +18,7 @@ import {
   X,
   Radar,
   ClipboardList,
+  Inbox,
 } from "lucide-react";
 import { NavLink } from "./nav-link";
 import { useAuth } from "@/lib/auth-context";
@@ -45,6 +46,11 @@ const GROWTH_NAV_ITEMS = [
     href: "/growth/observations",
     icon: ClipboardList,
     label: tGrowth("growth.nav.observations"),
+  },
+  {
+    href: "/growth/intake",
+    icon: Inbox,
+    label: tGrowth("growth.nav.intake"),
   },
 ];
 

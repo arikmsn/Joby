@@ -579,6 +579,14 @@ export const candidateSubmissions = pgTable(
   })
 );
 
+// --- Intake rate limits (public endpoint hardening; keys are salted hashes,
+//     never raw IPs/phones — log-hygiene by construction) ---
+export const intakeRateLimits = pgTable("intake_rate_limits", {
+  key: varchar("key", { length: 80 }).primaryKey(),
+  count: integer("count").notNull().default(1),
+  reset_at: timestamp("reset_at", { withTimezone: true }).notNull(),
+});
+
 // --- Cluster evidence snapshots (RI; counts only, no PII by construction) ---
 export const clusterEvidenceSnapshots = pgTable(
   "cluster_evidence_snapshots",
