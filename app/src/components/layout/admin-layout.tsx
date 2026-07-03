@@ -62,10 +62,10 @@ const GROWTH_NAV_ITEMS = [
 
 function useGrowthNavVisible(): boolean {
   const { user } = useAuth();
-  return (
-    process.env.NEXT_PUBLIC_GROWTH_MODULE_ENABLED === "true" &&
-    !!user?.admin_sub_role
-  );
+  // Server routes are the real gate (withGrowthAuth checks GROWTH_MODULE_ENABLED).
+  // Don't gate the nav on NEXT_PUBLIC_GROWTH_MODULE_ENABLED — it's baked at build
+  // time and a stale cached bundle would hide the nav even for authorized users.
+  return !!user?.admin_sub_role;
 }
 
 export function AdminLayout({ children }: { children: ReactNode }) {
