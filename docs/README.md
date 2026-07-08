@@ -52,6 +52,6 @@ Last updated: 2026-07-08 (docs consolidation round 1 — see [Joby_docs_audit_an
 - `/EXECUTION_PACK.md` — original build plan
 
 ## Known open items (tracked in the audit, not yet resolved)
-1. "Stage 1" naming collision: growth Stage 1 (collection cells) vs brand «שלב 1» (pilot families) — pending decision.
+1. ~~"Stage 1" naming collision~~ — **Resolved 2026-07-08.** Growth Engine stages (Stage 1/2/3…) are pipeline delivery stages in `growth/ROADMAP-STAGED.md`. Brand pilot families are now titled **"פיילוט ראשוני"** in `brand/Joby_internal_strategy.md`. Both docs carry clarifying notes.
 2. Fee framing: «אף עמלה לא יורדת מהשכר» vs the implemented 15% platform fee — pending product+legal decision; the promise is on the blocked list in the guardrails doc.
-3. Taxonomy unification (`docs/data/role-taxonomy.md`) — pending item 1.
+3. Taxonomy unification (`docs/data/role-taxonomy.md`) — unblocked by item 1; pilot role families (event_staff, promo_staff, flex_logistics_worker, warehouse_helper, project_worker) now live in `ROLE_FAMILIES` in `constants.ts` (added 2026-07-08).

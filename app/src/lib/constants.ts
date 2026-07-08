@@ -376,6 +376,12 @@ export const ROLE_FAMILIES = [
   { key: "cleaner", label_he: "עובד/ת ניקיון" },
   { key: "security_guard", label_he: "מאבטח/ת" },
   { key: "general_labor", label_he: "עבודה כללית" },
+  // Pilot role families (events/promo + flex-logistics)
+  { key: "event_staff", label_he: "עובד/ת אירועים" },
+  { key: "promo_staff", label_he: "דייל/ת קידום מכירות" },
+  { key: "project_worker", label_he: "עובד/ת פרויקטים קצרים" },
+  { key: "flex_logistics_worker", label_he: "עובד/ת לוגיסטיקה גמישה" },
+  { key: "warehouse_helper", label_he: "עוזר/ת מחסן" },
   { key: "other", label_he: "אחר" },
 ] as const;
 export type RoleFamilyKey = (typeof ROLE_FAMILIES)[number]["key"];

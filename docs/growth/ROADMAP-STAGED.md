@@ -3,6 +3,8 @@
 **Version:** 4.0 · **Date:** 2026-07-02 · **Status:** Approved
 **Baseline:** W1 foundation + W2 safe boundary shipped (RBAC, audit, sources/observations, dark LP shell + hardened intake + masked queue). Admin-only architecture and all legal/compliance guardrails unchanged. ⚖️ = requires legal review. 🚦 = launch gate.
 
+> **Scope note:** The "Stage 1/2/3…" numbering in this document refers exclusively to **Growth Engine delivery stages** (collection → AI layer → publishing → leads → candidates). This is separate from the product's **Pilot Role Families** (events/promo and flex-logistics, defined in `docs/brand/Joby_internal_strategy.md` under "פיילוט ראשוני"). Those product families are live in the marketplace taxonomy independently of which Growth Engine stage is active.
+
 ---
 
 ## 1. Stage-by-Stage Roadmap
